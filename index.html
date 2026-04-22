@@ -1156,8 +1156,24 @@ async function viewFile(storagePath, filename){
       document.getElementById('viewerBody').innerHTML =
         `<img src="${url}" alt="${escHTML(filename)}" style="max-width:100%;max-height:100%;object-fit:contain;padding:16px">`;
     } else if(isHtml){
-      document.getElementById('viewerBody').innerHTML =
-        `<iframe src="${url}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`;
+      // HTML files: fetch content and render via blob URL to avoid content-type issues
+      try{
+        const resp = await fetch(url);
+        const text = await resp.text();
+        const blob = new Blob([text], {type:'text/html'});
+        const blobUrl = URL.createObjectURL(blob);
+        document.getElementById('viewerBody').innerHTML =
+          `<iframe src="${blobUrl}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`;
+        setTimeout(()=>URL.revokeObjectURL(blobUrl), 60000);
+      }catch(e2){
+        // Fallback: open in new tab
+        window.open(url,'_blank');
+        document.getElementById('viewerBody').innerHTML =
+          `<div style="text-align:center;color:rgba(255,255,255,.6);padding:60px 30px">
+            <div style="font-size:3rem;margin-bottom:16px">🌐</div>
+            <div style="font-size:.95rem;margin-bottom:20px">El archivo HTML se abrió en una pestaña nueva.</div>
+          </div>`;
+      }
     } else if(isOffice){
       // Microsoft Office Online viewer
       const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url);
