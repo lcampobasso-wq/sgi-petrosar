@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGI - Sistema de Gestión Integrado</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3e;min-height:100vh}
+
+/* ── HEADER ── */
+.sgi-header{background:linear-gradient(135deg,#1e2d3e 0%,#253445 100%);padding:0 24px;height:70px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.3);position:sticky;top:0;z-index:200}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr-logo{width:44px;height:44px;background:rgba(232,160,32,.15);border:2px solid rgba(232,160,32,.3);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr-title{color:#fff;font-size:1.15rem;font-weight:700;letter-spacing:-.3px}
+.hdr-sub{color:rgba(255,255,255,.5);font-size:.76rem;margin-top:2px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-date{text-align:right;display:none}
+.hdr-date-label{color:rgba(255,255,255,.4);font-size:.7rem}
+.hdr-date-val{color:rgba(255,255,255,.75);font-size:.82rem;font-weight:600}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;transition:all .18s;font-family:inherit;line-height:1}
+.btn-amber{background:#e8a020;color:#fff}.btn-amber:hover{background:#d4901a}
+.btn-outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35)}.btn-outline:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:#1e2d3e;color:#fff}.btn-primary:hover{background:#253445}
+.btn-secondary{background:#f0f2f6;color:#1e2d3e;border:1px solid #d1d5db}.btn-secondary:hover{background:#e5e7eb}
+.btn-danger{background:#ef4444;color:#fff}.btn-danger:hover{background:#dc2626}
+.btn-ghost{background:none;border:none;padding:6px;cursor:pointer;border-radius:6px;color:#6b7280;transition:all .15s;font-family:inherit}
+.btn-ghost:hover{background:#f3f4f6;color:#1e2d3e}
+.btn-ghost.red:hover{background:#fee2e2;color:#ef4444}
+.btn-ghost.blue:hover{background:#eff6ff;color:#1d4ed8}
+.btn-sm{padding:5px 12px;font-size:.76rem}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* ── TABS ── */
+.tabs-wrap{background:#1e2d3e;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
+.tabs-wrap::-webkit-scrollbar{display:none}
+.tabs{display:flex;padding:0 12px;min-width:max-content}
+.tab{display:flex;align-items:center;gap:6px;padding:11px 15px;color:rgba(255,255,255,.45);font-size:.8rem;font-weight:500;cursor:pointer;border:none;border-bottom:3px solid transparent;background:none;transition:all .18s;white-space:nowrap;font-family:inherit}
+.tab:hover{color:rgba(255,255,255,.8)}
+.tab.active{color:#e8a020;border-bottom-color:#e8a020}
+.tab-icon{width:14px;height:14px;flex-shrink:0}
+
+/* ── PAGE ── */
+.page{max-width:1440px;margin:0 auto;padding:22px 18px}
+.view{display:none}.view.active{display:block}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid}
+.kpi-blue{border-color:#3b82f6}.kpi-green{border-color:#22c55e}.kpi-red{border-color:#ef4444}.kpi-yellow{border-color:#f59e0b}.kpi-purple{border-color:#8b5cf6}.kpi-cyan{border-color:#0891b2}
+.kpi-label{font-size:.72rem;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:2rem;font-weight:800;color:#1e2d3e;line-height:1.1;margin-top:3px}
+.kpi-icon svg{width:38px;height:38px}
+.kpi-blue .kpi-icon svg{stroke:#3b82f6}.kpi-green .kpi-icon svg{stroke:#22c55e}.kpi-red .kpi-icon svg{stroke:#ef4444}.kpi-yellow .kpi-icon svg{stroke:#f59e0b}.kpi-purple .kpi-icon svg{stroke:#8b5cf6}.kpi-cyan .kpi-icon svg{stroke:#0891b2}
+
+/* ── CHARTS ── */
+.charts-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:18px;margin-bottom:20px}
+.chart-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.chart-title{font-size:.87rem;font-weight:700;color:#1e2d3e;margin-bottom:14px}
+.chart-wrap{height:270px;position:relative}
+
+/* ── SECTION HEADER ── */
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.sec-title{font-size:1rem;font-weight:700;color:#1e2d3e}
+.sec-actions{display:flex;align-items:center;gap:8px}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#9ca3af;pointer-events:none}
+.search-input{padding:7px 12px 7px 32px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.82rem;font-family:inherit;color:#1e2d3e;transition:border-color .2s;width:220px}
+.search-input:focus{outline:none;border-color:#e8a020}
+
+/* ── TABLE ── */
+.table-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:#f8fafc;padding:11px 14px;text-align:left;font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+.tbl td{padding:13px 14px;border-bottom:1px solid #f3f4f6;font-size:.85rem;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafafa}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+.b-vigente{background:#dcfce7;color:#166534}
+.b-desactualizado{background:#fee2e2;color:#991b1b}
+.b-pendiente{background:#fef9c3;color:#854d0e}
+.b-revision{background:#ede9fe;color:#5b21b6}
+.b-automatizado{background:#cffafe;color:#0e7490}
+.files-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:#eff6ff;color:#1d4ed8;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.files-pill:hover{background:#dbeafe}
+.files-pill-empty{background:#f3f4f6;color:#9ca3af;cursor:default}
+.files-pill-empty:hover{background:#f3f4f6}
+
+/* ── MODALS ── */
+.modal{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center}
+.modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.48)}
+.modal-box{position:relative;background:#fff;border-radius:16px;width:92%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.modal-box.lg{max-width:760px}
+.modal-box.sm{max-width:460px}
+.modal-hdr{padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1}
+.modal-hdr-title{font-size:.95rem;font-weight:700;color:#1e2d3e}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;padding:4px;font-family:inherit}
+.modal-close:hover{color:#374151}
+.modal-body{padding:22px}
+.modal-footer{padding:14px 22px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:9px}
+
+/* ── FORMS ── */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:5px}
+.fi{width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.85rem;font-family:inherit;color:#1e2d3e;transition:border-color .2s;background:#fff}
+.fi:focus{outline:none;border-color:#e8a020;box-shadow:0 0 0 3px rgba(232,160,32,.1)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed #d1d5db;border-radius:10px;padding:26px 20px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.over{border-color:#e8a020;background:rgba(232,160,32,.04)}
+.upload-zone svg{color:#9ca3af;margin-bottom:8px}
+.upload-zone-text{font-size:.88rem;color:#374151;font-weight:600;margin-bottom:3px}
+.upload-zone-hint{font-size:.75rem;color:#9ca3af}
+.file-chips{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.file-chip{display:flex;align-items:center;gap:8px;padding:7px 11px;background:#f0f2f6;border-radius:7px;font-size:.8rem;text-align:left}
+.file-chip-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#1e2d3e}
+.file-chip-size{color:#9ca3af;flex-shrink:0;font-size:.73rem}
+.file-chip-rm{margin-left:4px;background:none;border:none;cursor:pointer;color:#9ca3af;font-size:1rem;line-height:1;padding:2px;font-family:inherit}
+.file-chip-rm:hover{color:#ef4444}
+
+/* ── FILE VIEWER ── */
+.viewer-modal-box{position:relative;background:#1e2d3e;border-radius:16px;width:96%;max-width:1000px;height:90vh;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column}
+.viewer-hdr{padding:12px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.viewer-hdr-name{color:#fff;font-size:.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
+.viewer-body{flex:1;overflow:hidden;background:#2d3748;display:flex;align-items:center;justify-content:center}
+.viewer-body embed,.viewer-body iframe{width:100%;height:100%;border:none}
+.viewer-body img{max-width:100%;max-height:100%;object-fit:contain;padding:16px}
+.carpeta-list{display:flex;flex-direction:column;gap:8px}
+.carpeta-item{display:flex;align-items:center;gap:11px;padding:11px 13px;background:#f8fafc;border-radius:9px;border:1px solid #e5e7eb}
+.carpeta-item-icon{font-size:1.5rem;flex-shrink:0}
+.carpeta-item-info{flex:1;min-width:0}
+.carpeta-item-name{font-size:.84rem;font-weight:600;color:#1e2d3e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.carpeta-item-size{font-size:.72rem;color:#9ca3af;margin-top:2px}
+.carpeta-item-actions{display:flex;gap:5px;flex-shrink:0}
+
+/* ── EMPTY / LOADING ── */
+.empty{text-align:center;padding:50px 20px;color:#9ca3af}
+.empty-icon{font-size:2.8rem;margin-bottom:10px}
+.empty-txt{font-size:.87rem}
+.loading-row{text-align:center;padding:36px;color:#9ca3af;display:flex;align-items:center;justify-content:center;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#e8a020;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.18);animation:toastIn .25s ease;max-width:400px;text-align:center}
+.t-ok{background:#22c55e;color:#fff}.t-err{background:#ef4444;color:#fff}.t-info{background:#e8a020;color:#fff}
+@keyframes toastIn{from{top:0;opacity:0}to{top:20px;opacity:1}}
+
+/* ── SETUP MODAL ── */
+.setup-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6}
+.setup-step:last-child{border-bottom:none}
+.setup-num{width:28px;height:28px;background:#e8a020;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;flex-shrink:0;margin-top:2px}
+.setup-step-content h4{font-size:.88rem;font-weight:700;color:#1e2d3e;margin-bottom:4px}
+.setup-step-content p{font-size:.8rem;color:#6b7280;line-height:1.5}
+.sql-block{background:#0f172a;color:#a5f3fc;border-radius:8px;padding:14px;font-family:monospace;font-size:.75rem;line-height:1.6;overflow-x:auto;margin-top:8px;max-height:280px;overflow-y:auto;white-space:pre}
+.copy-sql-btn{margin-top:7px;font-size:.75rem}
+
+/* ── ADMIN INFO ── */
+.admin-bar{background:linear-gradient(90deg,rgba(232,160,32,.12),rgba(232,160,32,.06));border-bottom:1px solid rgba(232,160,32,.2);padding:6px 24px;font-size:.75rem;color:#92600a;display:none;align-items:center;gap:6px}
+.admin-bar.show{display:flex}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .charts-grid{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3{grid-template-columns:1fr}
+  .hdr-sub{display:none}
+  .search-input{width:160px}
+}
+</style>
+</head>
+<body>
+
+<!-- ADMIN BAR -->
+<div class="admin-bar" id="adminBar">
+  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  Modo administrador activo
+  <span style="margin-left:auto;cursor:pointer;text-decoration:underline" onclick="adminLogout()">Salir</span>
+</div>
+
+<!-- HEADER -->
+<header class="sgi-header">
+  <div class="hdr-left">
+    <div class="hdr-logo">
+      <img src="data:image/png;base64,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" alt="PETROSAR SA" style="width:44px;height:44px;object-fit:contain;border-radius:8px">
+    </div>
+    <div>
+      <div class="hdr-title">Sistema de Gestión Integrado</div>
+      <div class="hdr-sub">Dashboard de Control de Documentación · PETROSAR SA</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button id="btnAddDoc" class="btn btn-amber" style="display:none" onclick="openAddModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Agregar
+    </button>
+    <button id="btnImport" class="btn btn-outline" style="display:none" onclick="openImportModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Importar Excel
+    </button>
+    <button id="btnAdminLogin" class="btn btn-outline" onclick="openAdminModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin
+    </button>
+    <button id="btnSetup" class="btn btn-outline btn-sm" onclick="openSetupModal()" title="Configuración inicial">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Setup
+    </button>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs-wrap">
+  <div class="tabs" id="tabsBar">
+    <button class="tab active" data-view="dashboard" onclick="showView('dashboard',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Dashboard
+    </button>
+    <button class="tab" data-view="gestion" onclick="showView('gestion',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Gestión
+    </button>
+    <button class="tab" data-view="reg-gestion" onclick="showView('reg-gestion',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Reg. Gestión
+    </button>
+    <button class="tab" data-view="transporte" onclick="showView('transporte',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Transporte
+    </button>
+    <button class="tab" data-view="produccion" onclick="showView('produccion',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>Producción
+    </button>
+    <button class="tab" data-view="construcciones" onclick="showView('construcciones',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>Construcciones
+    </button>
+    <button class="tab" data-view="lab-plantas" onclick="showView('lab-plantas',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v17.5A2.5 2.5 0 0011.5 22A2.5 2.5 0 0014 19.5V2"/><path d="M9 9h6"/></svg>Lab. y Plantas
+    </button>
+    <button class="tab" data-view="mediciones" onclick="showView('mediciones',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Mediciones
+    </button>
+    <button class="tab" data-view="ssa" onclick="showView('ssa',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>SSA
+    </button>
+    <button class="tab" data-view="reg-operativos" onclick="showView('reg-operativos',this)">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Reg. Operativos
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="page">
+
+  <!-- DASHBOARD -->
+  <div class="view active" id="view-dashboard">
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card kpi-blue"><div class="kpi-content"><p class="kpi-label">Total Documentos</p><p class="kpi-value" id="kpiTotal">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div></div>
+      <div class="kpi-card kpi-green"><div class="kpi-content"><p class="kpi-label">Vigentes</p><p class="kpi-value" id="kpiVigente">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
+      <div class="kpi-card kpi-red"><div class="kpi-content"><p class="kpi-label">Desactualizados</p><p class="kpi-value" id="kpiDesact">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div></div>
+      <div class="kpi-card kpi-yellow"><div class="kpi-content"><p class="kpi-label">Pendientes</p><p class="kpi-value" id="kpiPend">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
+      <div class="kpi-card kpi-purple"><div class="kpi-content"><p class="kpi-label">En Revisión</p><p class="kpi-value" id="kpiRev">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div></div>
+      <div class="kpi-card kpi-cyan"><div class="kpi-content"><p class="kpi-label">Automatizados</p><p class="kpi-value" id="kpiAuto">—</p></div><div class="kpi-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><p class="chart-title">Distribución por Estado</p><div class="chart-wrap"><canvas id="chartEstado"></canvas></div></div>
+      <div class="chart-card"><p class="chart-title">Documentos por Área</p><div class="chart-wrap"><canvas id="chartAreas"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- AREA VIEWS (se generan dinámicamente) -->
+  <div class="view" id="view-gestion"></div>
+  <div class="view" id="view-reg-gestion"></div>
+  <div class="view" id="view-transporte"></div>
+  <div class="view" id="view-produccion"></div>
+  <div class="view" id="view-construcciones"></div>
+  <div class="view" id="view-lab-plantas"></div>
+  <div class="view" id="view-mediciones"></div>
+  <div class="view" id="view-ssa"></div>
+  <div class="view" id="view-reg-operativos"></div>
+
+</main>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- ADMIN LOGIN -->
+<div class="modal" id="modalAdmin" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalAdmin')"></div>
+  <div class="modal-box sm">
+    <div class="modal-hdr"><span class="modal-hdr-title">Acceso Administrador</span><button class="modal-close" onclick="closeModal('modalAdmin')">×</button></div>
+    <div class="modal-body">
+      <div class="fg"><label>Contraseña</label><input type="password" class="fi" id="adminPwd" placeholder="Ingrese la contraseña" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+      <div id="adminErr" style="color:#ef4444;font-size:.8rem;display:none;margin-top:-8px;margin-bottom:10px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAdmin')">Cancelar</button>
+      <button class="btn btn-amber" onclick="doAdminLogin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD DOC -->
+<div class="modal" id="modalAdd" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalAdd')"></div>
+  <div class="modal-box lg">
+    <div class="modal-hdr"><span class="modal-hdr-title">Agregar Nuevo Documento</span><button class="modal-close" onclick="closeModal('modalAdd')">×</button></div>
+    <div class="modal-body">
+      <div class="g2">
+        <div class="fg"><label>Área *</label><select class="fi" id="addArea"><option value="">Seleccionar…</option><option value="gestion">Gestión</option><option value="reg-gestion">Reg. Gestión</option><option value="transporte">Transporte</option><option value="produccion">Producción</option><option value="construcciones">Construcciones</option><option value="lab-plantas">Lab. y Plantas</option><option value="mediciones">Mediciones</option><option value="ssa">SSA</option><option value="reg-operativos">Reg. Operativos</option></select></div>
+        <div class="fg"><label>Código *</label><input type="text" class="fi" id="addCodigo" placeholder="Ej: DOC-001"></div>
+      </div>
+      <div class="fg"><label>Nombre del Documento *</label><input type="text" class="fi" id="addNombre" placeholder="Nombre completo del documento"></div>
+      <div class="g3">
+        <div class="fg"><label>Fecha</label><input type="date" class="fi" id="addFecha"></div>
+        <div class="fg"><label>Revisión</label><input type="text" class="fi" id="addRevision" placeholder="Ej: Rev. 01"></div>
+        <div class="fg"><label>Estado</label><select class="fi" id="addEstado" onchange="toggleUrlField('add',this.value)"><option value="Vigente">Vigente</option><option value="Desactualizado">Desactualizado</option><option value="Pendiente">Pendiente</option><option value="En Revisión">En Revisión</option><option value="Automatizado">Automatizado</option></select></div>
+      </div>
+      <div class="fg"><label>Tipo</label><select class="fi" id="addTipo"><option value="Política">Política</option><option value="Manual">Manual</option><option value="Procedimiento">Procedimiento</option><option value="Registro">Registro</option><option value="Instructivo">Instructivo</option><option value="Otro">Otro</option></select></div>
+      <div class="fg" id="addUrlSistemaGroup" style="display:none"><label>🔗 URL del sistema que lo reemplaza</label><input type="url" class="fi" id="addUrlSistema" placeholder="https://..."></div>
+      <div class="fg">
+        <label>Archivos (opcional)</label>
+        <div class="upload-zone" id="addDropZone" onclick="document.getElementById('addFileInput').click()" ondragover="dzOver(event,'addDropZone')" ondragleave="dzLeave('addDropZone')" ondrop="dzDrop(event,'addDropZone','add')">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 8px;display:block"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="upload-zone-text">Arrastrá o hacé clic para seleccionar</p>
+          <p class="upload-zone-hint">PDF, DOC, DOCX, XLS, XLSX, CSV, HTML, PNG, JPG (máx. 50 MB c/u)</p>
+          <div class="file-chips" id="addFileChips"></div>
+        </div>
+        <input type="file" id="addFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.html,.png,.jpg,.jpeg" style="display:none" onchange="onFilesSelected(this,'add')">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAdd')">Cancelar</button>
+      <button class="btn btn-amber" id="btnSubmitAdd" onclick="submitAdd()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar Documento
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT DOC -->
+<div class="modal" id="modalEdit" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalEdit')"></div>
+  <div class="modal-box lg">
+    <div class="modal-hdr"><span class="modal-hdr-title">Editar Documento</span><button class="modal-close" onclick="closeModal('modalEdit')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="g2">
+        <div class="fg"><label>Área *</label><select class="fi" id="editArea"><option value="">Seleccionar…</option><option value="gestion">Gestión</option><option value="reg-gestion">Reg. Gestión</option><option value="transporte">Transporte</option><option value="produccion">Producción</option><option value="construcciones">Construcciones</option><option value="lab-plantas">Lab. y Plantas</option><option value="mediciones">Mediciones</option><option value="ssa">SSA</option><option value="reg-operativos">Reg. Operativos</option></select></div>
+        <div class="fg"><label>Código *</label><input type="text" class="fi" id="editCodigo"></div>
+      </div>
+      <div class="fg"><label>Nombre del Documento *</label><input type="text" class="fi" id="editNombre"></div>
+      <div class="g3">
+        <div class="fg"><label>Fecha</label><input type="date" class="fi" id="editFecha"></div>
+        <div class="fg"><label>Revisión</label><input type="text" class="fi" id="editRevision"></div>
+        <div class="fg"><label>Estado</label><select class="fi" id="editEstado" onchange="toggleUrlField('edit',this.value)"><option value="Vigente">Vigente</option><option value="Desactualizado">Desactualizado</option><option value="Pendiente">Pendiente</option><option value="En Revisión">En Revisión</option><option value="Automatizado">Automatizado</option></select></div>
+      </div>
+      <div class="fg"><label>Tipo</label><select class="fi" id="editTipo"><option value="Política">Política</option><option value="Manual">Manual</option><option value="Procedimiento">Procedimiento</option><option value="Registro">Registro</option><option value="Instructivo">Instructivo</option><option value="Otro">Otro</option></select></div>
+      <div class="fg" id="editUrlSistemaGroup" style="display:none"><label>🔗 URL del sistema que lo reemplaza</label><input type="url" class="fi" id="editUrlSistema" placeholder="https://..."></div>
+      <div class="fg">
+        <label>Agregar más archivos</label>
+        <div class="upload-zone" id="editDropZone" onclick="document.getElementById('editFileInput').click()" ondragover="dzOver(event,'editDropZone')" ondragleave="dzLeave('editDropZone')" ondrop="dzDrop(event,'editDropZone','edit')">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="upload-zone-text" style="font-size:.84rem">Arrastrá o hacé clic para agregar archivos</p>
+          <div class="file-chips" id="editFileChips"></div>
+        </div>
+        <input type="file" id="editFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.html,.png,.jpg,.jpeg" style="display:none" onchange="onFilesSelected(this,'edit')">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalEdit')">Cancelar</button>
+      <button class="btn btn-amber" id="btnSubmitEdit" onclick="submitEdit()">Guardar Cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARPETA DE ARCHIVOS -->
+<div class="modal" id="modalCarpeta" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalCarpeta')"></div>
+  <div class="modal-box" style="max-width:580px">
+    <div class="modal-hdr">
+      <span class="modal-hdr-title">📁 <span id="carpetaNombre">Archivos</span></span>
+      <button class="modal-close" onclick="closeModal('modalCarpeta')">×</button>
+    </div>
+    <div class="modal-body" id="carpetaBody" style="min-height:100px">
+      <div class="loading-row"><div class="spinner"></div>Cargando…</div>
+    </div>
+    <div class="modal-footer" id="carpetaFooter">
+      <button class="btn btn-secondary" onclick="closeModal('modalCarpeta')">Cerrar</button>
+      <button class="btn btn-outline" id="btnGenerarListado" style="display:none;background:#253445;color:#e8a020;border:1.5px solid #e8a020" onclick="generarListado()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Generar Listado Actualizado
+      </button>
+      <button class="btn btn-amber" id="btnCarpetaAddFile" style="display:none" onclick="openAddFileModal()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Subir archivo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD FILE TO EXISTING DOC -->
+<div class="modal" id="modalAddFile" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalAddFile')"></div>
+  <div class="modal-box sm">
+    <div class="modal-hdr"><span class="modal-hdr-title">Subir Archivo</span><button class="modal-close" onclick="closeModal('modalAddFile')">×</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <div class="upload-zone" id="afDropZone" onclick="document.getElementById('afFileInput').click()" ondragover="dzOver(event,'afDropZone')" ondragleave="dzLeave('afDropZone')" ondrop="dzDrop(event,'afDropZone','af')">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="upload-zone-text">Seleccionar archivo(s)</p>
+          <p class="upload-zone-hint">PDF, DOC, XLS, HTML, imágenes…</p>
+          <div class="file-chips" id="afFileChips"></div>
+        </div>
+        <input type="file" id="afFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.html,.png,.jpg,.jpeg" style="display:none" onchange="onFilesSelected(this,'af')">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAddFile')">Cancelar</button>
+      <button class="btn btn-amber" id="btnSubmitAddFile" onclick="submitAddFile()">Subir</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP MODAL -->
+<div class="modal" id="modalSetup" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalSetup')"></div>
+  <div class="modal-box lg" style="max-width:700px">
+    <div class="modal-hdr">
+      <span class="modal-hdr-title">⚙️ Configuración Inicial — Supabase</span>
+      <button class="modal-close" onclick="closeModal('modalSetup')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.84rem;color:#6b7280;margin-bottom:18px;line-height:1.6">Antes de usar el SGI por primera vez necesitás crear las tablas y el bucket de almacenamiento en tu proyecto Supabase <strong>(ahapckaovtgnxhwyuetw)</strong>. Seguí estos 3 pasos una sola vez:</p>
+
+      <div class="setup-step">
+        <div class="setup-num">1</div>
+        <div class="setup-step-content">
+          <h4>Crear las tablas en SQL Editor</h4>
+          <p>Andá a <strong>Supabase → SQL Editor</strong>, creá una nueva query, pegá el siguiente SQL y ejecutalo:</p>
+          <div class="sql-block" id="sqlBlock">-- SGI: Tablas del Sistema de Gestión Integrado
+-- Ejecutar en Supabase SQL Editor
+
+CREATE TABLE IF NOT EXISTS sgi_documentos (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo      text NOT NULL,
+  nombre      text NOT NULL,
+  area        text NOT NULL,
+  tipo        text DEFAULT 'Otro',
+  estado      text DEFAULT 'Vigente',
+  fecha       date,
+  revision    text,
+  created_at  timestamptz DEFAULT now(),
+  updated_at  timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sgi_archivos (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doc_id       uuid REFERENCES sgi_documentos(id) ON DELETE CASCADE,
+  filename     text NOT NULL,
+  storage_path text NOT NULL,
+  size         bigint,
+  mime_type    text,
+  uploaded_at  timestamptz DEFAULT now()
+);
+
+-- Deshabilitar RLS para uso interno
+ALTER TABLE sgi_documentos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sgi_archivos   DISABLE ROW LEVEL SECURITY;</div>
+          <button class="btn btn-secondary copy-sql-btn" onclick="copySQL()">📋 Copiar SQL</button>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="setup-num">2</div>
+        <div class="setup-step-content">
+          <h4>Crear el bucket de almacenamiento</h4>
+          <p>Andá a <strong>Supabase → Storage → New bucket</strong> y creá uno con estos datos exactos:</p>
+          <ul style="font-size:.82rem;color:#374151;margin-top:8px;padding-left:18px;line-height:2">
+            <li><strong>Name:</strong> <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px">sgi-docs</code></li>
+            <li><strong>Public bucket:</strong> ✅ Activado (para poder ver y descargar archivos)</li>
+            <li><strong>File size limit:</strong> 52428800 (50 MB)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="setup-num">3</div>
+        <div class="setup-step-content">
+          <h4>Verificar la conexión</h4>
+          <p>Hacé clic en "Probar conexión" para confirmar que todo está listo:</p>
+          <button class="btn btn-amber" style="margin-top:10px" onclick="testConnection()">🔌 Probar conexión</button>
+          <div id="testResult" style="margin-top:10px;font-size:.82rem;display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalSetup')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- IMPORT MODAL -->
+<div class="modal" id="modalImport" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalImport')"></div>
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-hdr"><span class="modal-hdr-title">📥 Importar Documentos desde Excel</span><button class="modal-close" onclick="closeModal('modalImport')">×</button></div>
+    <div class="modal-body">
+      <div style="background:#f0f2f6;border-radius:10px;padding:16px;margin-bottom:18px;font-size:.83rem;color:#374151;line-height:1.7">
+        <strong>Instrucciones:</strong><br>
+        1. Usá la planilla template (columnas: codigo, nombre, area, tipo, estado, fecha, revision)<br>
+        2. La primera fila con datos debe empezar en la <strong>fila 5</strong> del template<br>
+        3. Los campos obligatorios son: <strong>Código, Nombre y Área</strong>
+      </div>
+      <div class="fg">
+        <label>Seleccionar archivo Excel (.xlsx)</label>
+        <div class="upload-zone" id="importDropZone" onclick="document.getElementById('importFileInput').click()" ondragover="dzOver(event,'importDropZone')" ondragleave="dzLeave('importDropZone')" ondrop="importDrop(event)">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 8px;display:block;color:#9ca3af"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <p class="upload-zone-text">Arrastrá o hacé clic para seleccionar</p>
+          <p class="upload-zone-hint">Archivos .xlsx únicamente</p>
+          <div id="importFileName" style="margin-top:8px;font-size:.82rem;font-weight:600;color:#1e2d3e"></div>
+        </div>
+        <input type="file" id="importFileInput" accept=".xlsx" style="display:none" onchange="onImportFileSelected(this)">
+      </div>
+      <div id="importPreview" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:.83rem;font-weight:700;color:#1e2d3e">Vista previa</span>
+          <span id="importCount" style="font-size:.78rem;background:#dcfce7;color:#166534;padding:2px 10px;border-radius:20px;font-weight:700"></span>
+        </div>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:.76rem">
+            <thead><tr id="importPreviewHead" style="background:#f8fafc;position:sticky;top:0"></tr></thead>
+            <tbody id="importPreviewBody"></tbody>
+          </table>
+        </div>
+        <div id="importErrors" style="display:none;margin-top:10px;background:#fee2e2;border-radius:8px;padding:10px;font-size:.78rem;color:#991b1b"></div>
+      </div>
+      <div id="importProgress" style="display:none;margin-top:14px">
+        <div style="font-size:.82rem;color:#374151;margin-bottom:6px" id="importProgressText">Importando...</div>
+        <div style="background:#e5e7eb;border-radius:20px;height:8px"><div id="importProgressBar" style="background:#22c55e;height:8px;border-radius:20px;transition:width .3s;width:0%"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalImport')">Cancelar</button>
+      <button class="btn btn-amber" id="btnDoImport" style="display:none" onclick="doImport()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Importar <span id="btnImportCount"></span> documentos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FILE VIEWER MODAL -->
+<div class="modal" id="modalViewer" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalViewer')"></div>
+  <div class="viewer-modal-box">
+    <div class="viewer-hdr">
+      <span class="viewer-hdr-name" id="viewerFilename">—</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-amber btn-sm" id="viewerDownloadBtn" onclick="downloadFromViewer()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar
+        </button>
+        <button class="modal-close" style="color:rgba(255,255,255,.6)" onclick="closeModal('modalViewer')">×</button>
+      </div>
+    </div>
+    <div class="viewer-body" id="viewerBody">
+      <div class="loading-row" style="color:rgba(255,255,255,.5)"><div class="spinner"></div>Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────
+const SUPA_URL    = 'https://ahapckaovtgnxhwyuetw.supabase.co';
+const SUPA_KEY    = 'sb_publishable_TKbj-awpHudWIXSWprQhEg_OB8-urlg';
+const ADMIN_PASS  = 'Petrosar103!';   // <-- cambiá la contraseña aquí
+const BUCKET      = 'sgi-docs';
+const AREAS = ['gestion','reg-gestion','transporte','produccion','construcciones','lab-plantas','mediciones','ssa','reg-operativos'];
+const AREA_LABELS = {gestion:'Gestión','reg-gestion':'Reg. Gestión',transporte:'Transporte',produccion:'Producción',construcciones:'Construcciones','lab-plantas':'Lab. y Plantas',mediciones:'Mediciones',ssa:'SSA','reg-operativos':'Reg. Operativos'};
+
+// ── STATE ────────────────────────────────────────────────────────────
+let sb, isAdmin=false, currentView='dashboard';
+let chartEst=null, chartAr=null;
+let selectedFiles={add:[],edit:[],af:[]};
+let carpetaDocId=null;
+let editDocId=null;
+
+// ── INIT ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  const { createClient } = supabase;
+  sb = createClient(SUPA_URL, SUPA_KEY);
+  loadDashboard();
+});
+
+// ── VIEWS ─────────────────────────────────────────────────────────────
+function showView(view, tabEl){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  if(tabEl) tabEl.classList.add('active');
+  currentView = view;
+
+  // Show/hide Add button
+  const isArea = AREAS.includes(view);
+  document.getElementById('btnAddDoc').style.display = (isAdmin && isArea) ? 'inline-flex' : 'none';
+
+  if(view === 'dashboard') loadDashboard();
+  else if(isArea) loadArea(view);
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+async function loadDashboard(){
+  try{
+    const {data,error} = await sb.from('sgi_documentos').select('estado,area');
+    if(error){ if(error.code==='42P01') showSetupHint(); return; }
+
+    const estadoCounts={Vigente:0,Desactualizado:0,Pendiente:0,'En Revisión':0,Automatizado:0};
+    const areaCounts={};
+    data.forEach(r=>{
+      if(r.estado in estadoCounts) estadoCounts[r.estado]++;
+      const lbl = AREA_LABELS[r.area]||r.area;
+      areaCounts[lbl]=(areaCounts[lbl]||0)+1;
+    });
+    const total=data.length;
+    document.getElementById('kpiTotal').textContent=total;
+    document.getElementById('kpiVigente').textContent=estadoCounts['Vigente'];
+    document.getElementById('kpiDesact').textContent=estadoCounts['Desactualizado'];
+    document.getElementById('kpiPend').textContent=estadoCounts['Pendiente'];
+    document.getElementById('kpiRev').textContent=estadoCounts['En Revisión'];
+    document.getElementById('kpiAuto').textContent=estadoCounts['Automatizado'];
+
+    renderCharts(estadoCounts, areaCounts);
+  }catch(e){ console.error(e); }
+}
+
+function renderCharts(ec, ac){
+  const COLORS={Vigente:'#4F8A5B',Desactualizado:'#D6D9DE',Pendiente:'#C9B458','En Revisión':'#8b5cf6',Automatizado:'#0891b2'};
+  if(chartEst){ chartEst.destroy(); chartEst=null; }
+  if(chartAr){  chartAr.destroy();  chartAr=null; }
+
+  Chart.defaults.font.family='Segoe UI,system-ui,sans-serif';
+  Chart.defaults.font.size=12;
+  Chart.defaults.color='rgba(46,61,70,.7)';
+
+  const ctxE=document.getElementById('chartEstado');
+  if(ctxE) chartEst=new Chart(ctxE,{type:'pie',data:{labels:Object.keys(ec),datasets:[{data:Object.values(ec),backgroundColor:Object.keys(ec).map(k=>COLORS[k]||'#cbd5e1'),borderColor:'#fff',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:14,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'#1f2937',padding:10}}}});
+
+  const ctxA=document.getElementById('chartAreas');
+  if(ctxA) chartAr=new Chart(ctxA,{type:'bar',data:{labels:Object.keys(ac),datasets:[{data:Object.values(ac),backgroundColor:'rgba(79,138,91,.75)',borderColor:'rgba(79,138,91,1)',borderWidth:2,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{backgroundColor:'#1f2937',padding:10}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11}}},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+}
+
+function showSetupHint(){
+  document.getElementById('kpiTotal').textContent='!';
+  ['kpiVigente','kpiDesact','kpiPend','kpiRev','kpiAuto'].forEach(id=>document.getElementById(id).textContent='—');
+  toast('info','Tablas no encontradas. Hacé clic en Setup para configurar.');
+}
+
+// ── AREA VIEWS ────────────────────────────────────────────────────────
+async function loadArea(area){
+  const el=document.getElementById('view-'+area);
+  el.innerHTML=`<div class="loading-row"><div class="spinner"></div>Cargando documentos…</div>`;
+  try{
+    const [{data:docs,error:e1},{data:files,error:e2}] = await Promise.all([
+      sb.from('sgi_documentos').select('*').eq('area',area).order('codigo'),
+      sb.from('sgi_archivos').select('doc_id')
+    ]);
+    if(e1) throw e1;
+    const fileCounts={};
+    (files||[]).forEach(f=>{ fileCounts[f.doc_id]=(fileCounts[f.doc_id]||0)+1; });
+    renderAreaView(area,docs||[],el,fileCounts);
+  }catch(e){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-txt">Error al cargar: ${e.message}</div></div>`;
+  }
+}
+
+function renderAreaView(area, docs, el, fileCounts={}){
+  const label=AREA_LABELS[area]||area;
+  el.innerHTML=`
+    <div class="sec-header">
+      <span class="sec-title">${label}</span>
+      <div class="sec-actions">
+        <div class="search-wrap">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" placeholder="Buscar…" id="search-${area}" oninput="filterTable('${area}',this.value)">
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl" id="tbl-${area}">
+        <thead><tr>
+          <th>Código</th><th>Nombre</th><th>Tipo</th><th>Revisión</th><th>Fecha</th><th>Estado</th><th>Archivos</th>
+          ${isAdmin?'<th>Acciones</th>':''}
+        </tr></thead>
+        <tbody id="tbody-${area}">
+        ${docs.length===0?`<tr><td colspan="${isAdmin?8:7}" style="text-align:center;padding:40px;color:#9ca3af">Sin documentos en esta área</td></tr>`
+          :docs.map(d=>rowHTML(d,fileCounts[d.id]||0)).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function rowHTML(d, fileCount=0){
+  const badgeCls={Vigente:'b-vigente',Desactualizado:'b-desactualizado',Pendiente:'b-pendiente','En Revisión':'b-revision',Automatizado:'b-automatizado'}[d.estado]||'b-pendiente';
+  const fecha=d.fecha?d.fecha.split('-').reverse().join('/'):'—';
+  const adminCols=isAdmin?`<td><div style="display:flex;gap:4px">
+    <button class="btn-ghost blue" title="Editar" onclick="openEditModal('${d.id}')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+    <button class="btn-ghost red" title="Eliminar" onclick="deleteDoc('${d.id}','${escHTML(d.nombre)}')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+  </div></td>`:'';
+  const urlSistema = d.url_sistema || '';
+  const filesBadge = d.codigo === 'RG-P-01-01'
+    ? `<button class="files-pill" style="background:#fef3c7;color:#92600a;border:1px solid #fbbf24" onclick="openCarpeta('${d.id}','${escHTML(d.nombre)}','${escHTML(d.codigo)}')">⚡ Generación automática</button>`
+    : d.estado === 'Automatizado' && urlSistema
+    ? `<a href="${escHTML(urlSistema)}" target="_blank" class="files-pill" style="background:#cffafe;color:#0e7490;border:1px solid #67e8f9;text-decoration:none">🔗 Ver sistema</a>`
+    : d.estado === 'Automatizado'
+    ? `<button class="files-pill" style="background:#cffafe;color:#0e7490;border:1px solid #67e8f9" onclick="openCarpeta('${d.id}','${escHTML(d.nombre)}','${escHTML(d.codigo)}')">🔗 Automatizado</button>`
+    : fileCount > 0
+    ? `<button class="files-pill" onclick="openCarpeta('${d.id}','${escHTML(d.nombre)}','${escHTML(d.codigo)}')">📂 <span style="background:#1d4ed8;color:#fff;border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:800">${fileCount}</span> archivo${fileCount===1?'':'s'}</button>`
+    : `<button class="files-pill files-pill-empty" onclick="openCarpeta('${d.id}','${escHTML(d.nombre)}','${escHTML(d.codigo)}')">📂 Sin archivos</button>`;
+  return `<tr data-nombre="${escHTML(d.nombre)}" data-codigo="${escHTML(d.codigo)}">
+    <td><strong style="color:#1e2d3e">${escHTML(d.codigo)}</strong></td>
+    <td>${escHTML(d.nombre)}</td>
+    <td style="color:#6b7280">${escHTML(d.tipo||'—')}</td>
+    <td style="color:#6b7280">${escHTML(d.revision||'—')}</td>
+    <td style="color:#6b7280">${fecha}</td>
+    <td><span class="badge ${badgeCls}">${escHTML(d.estado)}</span></td>
+    <td>${filesBadge}</td>
+    ${adminCols}
+  </tr>`;
+}
+
+function filterTable(area, q){
+  const rows=document.querySelectorAll(`#tbody-${area} tr`);
+  const lq=q.toLowerCase();
+  rows.forEach(r=>{
+    const nombre=(r.dataset.nombre||'').toLowerCase();
+    const codigo=(r.dataset.codigo||'').toLowerCase();
+    r.style.display=(nombre.includes(lq)||codigo.includes(lq))?'':'none';
+  });
+}
+
+
+// ── TOGGLE URL SISTEMA FIELD ──────────────────────────────────────────
+function toggleUrlField(ctx, estado){
+  const grp = document.getElementById(ctx+'UrlSistemaGroup');
+  if(grp) grp.style.display = estado === 'Automatizado' ? 'block' : 'none';
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────
+function openAdminModal(){ document.getElementById('adminPwd').value=''; document.getElementById('adminErr').style.display='none'; openModal('modalAdmin'); setTimeout(()=>document.getElementById('adminPwd').focus(),100); }
+function doAdminLogin(){
+  const pwd=document.getElementById('adminPwd').value;
+  if(pwd===ADMIN_PASS){
+    isAdmin=true;
+    closeModal('modalAdmin');
+    document.getElementById('adminBar').classList.add('show');
+    document.getElementById('btnAdminLogin').style.display='none';
+    document.getElementById('btnImport').style.display='inline-flex';
+    const isArea=AREAS.includes(currentView);
+    if(isArea) document.getElementById('btnAddDoc').style.display='inline-flex';
+    // Re-render current area to show action columns
+    if(isArea) loadArea(currentView);
+    toast('ok','Modo administrador activado');
+  }else{
+    document.getElementById('adminErr').textContent='Contraseña incorrecta';
+    document.getElementById('adminErr').style.display='block';
+  }
+}
+function adminLogout(){
+  isAdmin=false;
+  document.getElementById('adminBar').classList.remove('show');
+  document.getElementById('btnAdminLogin').style.display='inline-flex';
+  document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnAddDoc').style.display='none';
+  if(AREAS.includes(currentView)) loadArea(currentView);
+  toast('info','Sesión de administrador cerrada');
+}
+
+// ── ADD DOC ───────────────────────────────────────────────────────────
+function openAddModal(){
+  selectedFiles.add=[];
+  document.getElementById('addFileChips').innerHTML='';
+  ['addArea','addCodigo','addNombre','addFecha','addRevision'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('addEstado').value='Vigente';
+  document.getElementById('addUrlSistema').value='';
+  toggleUrlField('add','Vigente');
+  document.getElementById('addTipo').value='Procedimiento';
+  // Pre-select current area
+  if(AREAS.includes(currentView)) document.getElementById('addArea').value=currentView;
+  openModal('modalAdd');
+}
+
+async function submitAdd(){
+  const area=document.getElementById('addArea').value;
+  const codigo=document.getElementById('addCodigo').value.trim();
+  const nombre=document.getElementById('addNombre').value.trim();
+  if(!area||!codigo||!nombre){ toast('err','Completá los campos obligatorios (*)'); return; }
+
+  const btn=document.getElementById('btnSubmitAdd');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    const {data:doc,error:e1}=await sb.from('sgi_documentos').insert({
+      area,codigo,nombre,
+      tipo:document.getElementById('addTipo').value,
+      estado:document.getElementById('addEstado').value,
+      fecha:document.getElementById('addFecha').value||null,
+      revision:document.getElementById('addRevision').value||null,
+      url_sistema:document.getElementById('addUrlSistema').value||null
+    }).select().single();
+    if(e1) throw e1;
+
+    if(selectedFiles.add.length>0) await uploadFiles(doc.id, selectedFiles.add);
+
+    closeModal('modalAdd');
+    toast('ok','Documento agregado');
+    loadArea(area);
+    loadDashboard();
+  }catch(e){ toast('err','Error: '+e.message); }
+  finally{ btn.disabled=false; btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Guardar Documento'; }
+}
+
+// ── EDIT DOC ──────────────────────────────────────────────────────────
+async function openEditModal(id){
+  editDocId=id;
+  selectedFiles.edit=[];
+  document.getElementById('editFileChips').innerHTML='';
+  try{
+    const {data,error}=await sb.from('sgi_documentos').select('*').eq('id',id).single();
+    if(error) throw error;
+    document.getElementById('editId').value=data.id;
+    document.getElementById('editArea').value=data.area;
+    document.getElementById('editCodigo').value=data.codigo;
+    document.getElementById('editNombre').value=data.nombre;
+    document.getElementById('editFecha').value=data.fecha||'';
+    document.getElementById('editRevision').value=data.revision||'';
+    document.getElementById('editEstado').value=data.estado;
+    document.getElementById('editTipo').value=data.tipo||'Otro';
+    document.getElementById('editUrlSistema').value=data.url_sistema||'';
+    toggleUrlField('edit', data.estado);
+    openModal('modalEdit');
+  }catch(e){ toast('err','Error al cargar: '+e.message); }
+}
+
+async function submitEdit(){
+  const id=document.getElementById('editId').value;
+  const area=document.getElementById('editArea').value;
+  const codigo=document.getElementById('editCodigo').value.trim();
+  const nombre=document.getElementById('editNombre').value.trim();
+  if(!area||!codigo||!nombre){ toast('err','Completá los campos obligatorios (*)'); return; }
+
+  const btn=document.getElementById('btnSubmitEdit');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    const {error}=await sb.from('sgi_documentos').update({
+      area,codigo,nombre,
+      tipo:document.getElementById('editTipo').value,
+      estado:document.getElementById('editEstado').value,
+      fecha:document.getElementById('editFecha').value||null,
+      revision:document.getElementById('editRevision').value||null,
+      url_sistema:document.getElementById('editUrlSistema').value||null,
+      updated_at:new Date().toISOString()
+    }).eq('id',id);
+    if(error) throw error;
+    if(selectedFiles.edit.length>0) await uploadFiles(id, selectedFiles.edit);
+    closeModal('modalEdit');
+    toast('ok','Documento actualizado');
+    loadArea(area);
+    loadDashboard();
+  }catch(e){ toast('err','Error: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Guardar Cambios'; }
+}
+
+// ── DELETE DOC ────────────────────────────────────────────────────────
+async function deleteDoc(id, nombre){
+  if(!confirm(`¿Eliminar el documento "${nombre}"?\nTambién se eliminarán todos sus archivos.`)) return;
+  try{
+    // Get files to delete from storage
+    const {data:files}=await sb.from('sgi_archivos').select('storage_path').eq('doc_id',id);
+    if(files && files.length>0){
+      const paths=files.map(f=>f.storage_path);
+      await sb.storage.from(BUCKET).remove(paths);
+    }
+    const {error}=await sb.from('sgi_documentos').delete().eq('id',id);
+    if(error) throw error;
+    toast('ok','Documento eliminado');
+    loadArea(currentView);
+    loadDashboard();
+  }catch(e){ toast('err','Error al eliminar: '+e.message); }
+}
+
+// ── CARPETA (FILE LIST) ────────────────────────────────────────────────
+let carpetaCodigo = '';
+
+async function openCarpeta(docId, nombre, codigo=''){
+  carpetaDocId=docId;
+  carpetaCodigo=codigo;
+  document.getElementById('carpetaNombre').textContent=nombre;
+  document.getElementById('btnCarpetaAddFile').style.display=isAdmin?'inline-flex':'none';
+  // Show listado button for RG-P-01-01
+  const btnListado = document.getElementById('btnGenerarListado');
+  if(btnListado) btnListado.style.display = codigo==='RG-P-01-01' ? 'inline-flex' : 'none';
+  document.getElementById('carpetaBody').innerHTML='<div class="loading-row"><div class="spinner"></div>Cargando…</div>';
+  openModal('modalCarpeta');
+  await loadCarpetaFiles();
+}
+
+async function loadCarpetaFiles(){
+  try{
+    const {data,error}=await sb.from('sgi_archivos').select('*').eq('doc_id',carpetaDocId).order('uploaded_at');
+    if(error) throw error;
+    renderCarpetaFiles(data||[]);
+  }catch(e){
+    document.getElementById('carpetaBody').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-txt">Error: ${e.message}</div></div>`;
+  }
+}
+
+function renderCarpetaFiles(files){
+  const body=document.getElementById('carpetaBody');
+  if(files.length===0){ body.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-txt">No hay archivos. Subí el primer archivo con el botón de abajo.</div></div>'; return; }
+  body.innerHTML=`<div class="carpeta-list">${files.map(f=>carpetaFileHTML(f)).join('')}</div>`;
+}
+
+function carpetaFileHTML(f){
+  const icons={'.pdf':'\u{1F4C4}','.xlsx':'\u{1F4CA}','.xls':'\u{1F4CA}','.csv':'\u{1F4CA}','.doc':'\u{1F4DD}','.docx':'\u{1F4DD}','.html':'\u{1F310}','.png':'\u{1F5BC}\uFE0F','.jpg':'\u{1F5BC}\uFE0F','.jpeg':'\u{1F5BC}\uFE0F'};
+  const ext='.'+f.filename.split('.').pop().toLowerCase();
+  const icon=icons[ext]||'\u{1F4CE}';
+  const sz=f.size?formatSize(f.size):'';
+  const isEditableFormat=['.doc','.docx','.xls','.xlsx','.csv'].includes(ext);
+  const canDownload = isAdmin || !isEditableFormat;
+  const viewBtn=`<button class="btn-ghost blue" title="Ver" onclick="viewFile('${escHTML(f.storage_path)}','${escHTML(f.filename)}')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+  const downloadBtn = canDownload
+    ? `<button class="btn-ghost blue" title="Descargar" onclick="downloadFile('${escHTML(f.storage_path)}','${escHTML(f.filename)}')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>`
+    : `<span title="Solo administrador puede descargar este formato" style="padding:5px;font-size:.85rem">\uD83D\uDD12</span>`;
+  const deleteBtn=isAdmin
+    ? `<button class="btn-ghost red" title="Eliminar" onclick="deleteFile('${f.id}','${escHTML(f.storage_path)}','${escHTML(f.filename)}')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>`
+    : '';
+  const lockLabel=(!isAdmin && isEditableFormat)
+    ? `<span style="font-size:.68rem;background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:4px">Solo Admin descarga</span>`
+    : '';
+  return `<div class="carpeta-item">
+    <span class="carpeta-item-icon">${icon}</span>
+    <div class="carpeta-item-info">
+      <div class="carpeta-item-name" title="${escHTML(f.filename)}">${escHTML(f.filename)}</div>
+      <div style="display:flex;align-items:center;margin-top:2px">${sz?`<span class="carpeta-item-size">${sz}</span>`:''} ${lockLabel}</div>
+    </div>
+    <div class="carpeta-item-actions">${viewBtn}${downloadBtn}${deleteBtn}</div>
+  </div>`;
+}
+
+// ── GENERAR LISTADO DE INFORMACIÓN DOCUMENTADA ───────────────────────
+async function generarListado(){
+  const btn = document.getElementById('btnGenerarListado');
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  try{
+    const {data, error} = await sb.from('sgi_documentos').select('*').order('area').order('codigo');
+    if(error) throw error;
+
+    const areaOrder = ['gestion','reg-gestion','transporte','produccion','construcciones','lab-plantas','mediciones','ssa','reg-operativos'];
+    const docs = data || [];
+    docs.sort((a,b)=>{
+      const ai = areaOrder.indexOf(a.area), bi = areaOrder.indexOf(b.area);
+      if(ai !== bi) return ai - bi;
+      return a.codigo.localeCompare(b.codigo);
+    });
+
+    const now = new Date();
+    const fechaGen = now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const horaGen  = now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+
+    const estadoBadge = e => {
+      const map = {Vigente:'#166534;background:#dcfce7',Desactualizado:'#991b1b;background:#fee2e2',Pendiente:'#854d0e;background:#fef9c3','En Revisión':'#5b21b6;background:#ede9fe',Automatizado:'#0e7490;background:#cffafe'};
+      const s = map[e] || '#374151;background:#f3f4f6';
+      return `<span style="color:${s};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap">${e}</span>`;
+    };
+
+    let currentArea = '';
+    let rows = '';
+    let n = 0;
+    docs.forEach(d => {
+      if(d.area !== currentArea){
+        currentArea = d.area;
+        const lbl = AREA_LABELS[d.area] || d.area;
+        rows += `<tr><td colspan="7" style="background:#1e2d3e;color:#e8a020;font-weight:700;font-size:12px;padding:8px 14px;letter-spacing:.5px;text-transform:uppercase">${lbl}</td></tr>`;
+      }
+      n++;
+      const fecha = d.fecha ? d.fecha.split('-').reverse().join('/') : '—';
+      const bg = n%2===0?'#f8fafc':'#ffffff';
+      rows += `<tr style="background:${bg}">
+        <td style="padding:7px 12px;font-size:12px;font-weight:700;color:#1e2d3e;white-space:nowrap">${escHTML(d.codigo)}</td>
+        <td style="padding:7px 12px;font-size:12px;color:#1e2d3e">${escHTML(d.nombre)}</td>
+        <td style="padding:7px 12px;font-size:12px;color:#6b7280;text-align:center">${escHTML(d.tipo||'—')}</td>
+        <td style="padding:7px 12px;font-size:12px;color:#6b7280;text-align:center">${escHTML(d.revision||'—')}</td>
+        <td style="padding:7px 12px;font-size:12px;color:#6b7280;text-align:center">${fecha}</td>
+        <td style="padding:7px 12px;text-align:center">${estadoBadge(d.estado)}</td>
+      </tr>`;
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>RG-P-01-01 · Listado de Información Documentada</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3e}
+  .header{background:linear-gradient(135deg,#1e2d3e,#253445);padding:22px 32px;display:flex;justify-content:space-between;align-items:center}
+  .header-left h1{color:#fff;font-size:1.1rem;font-weight:700}
+  .header-left p{color:rgba(255,255,255,.5);font-size:.75rem;margin-top:3px}
+  .header-right{text-align:right}
+  .header-right .code{color:#e8a020;font-weight:700;font-size:.95rem}
+  .header-right .date{color:rgba(255,255,255,.5);font-size:.75rem;margin-top:3px}
+  .stats{display:flex;gap:14px;padding:16px 32px;background:#fff;border-bottom:1px solid #e5e7eb}
+  .stat{text-align:center;flex:1;padding:10px;background:#f8fafc;border-radius:8px;border-left:3px solid}
+  .stat-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280}
+  .stat-val{font-size:1.5rem;font-weight:800;margin-top:2px}
+  .s-total{border-color:#3b82f6}.s-total .stat-val{color:#3b82f6}
+  .s-vig{border-color:#22c55e}.s-vig .stat-val{color:#22c55e}
+  .s-des{border-color:#ef4444}.s-des .stat-val{color:#ef4444}
+  .s-pend{border-color:#f59e0b}.s-pend .stat-val{color:#f59e0b}
+  .s-rev{border-color:#8b5cf6}.s-rev .stat-val{color:#8b5cf6}
+  .content{padding:20px 32px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  thead th{background:#1e2d3e;color:#fff;padding:10px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:left}
+  tfoot td{background:#f8fafc;padding:10px 14px;font-size:11px;color:#6b7280;border-top:2px solid #e5e7eb}
+  .footer{padding:16px 32px;text-align:center;font-size:.72rem;color:#9ca3af;border-top:1px solid #e5e7eb;margin-top:16px}
+  @media print{body{background:#fff}.header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1>Listado de Información Documentada</h1>
+    <p>Sistema de Gestión Integrado · PETROSAR SA</p>
+  </div>
+  <div class="header-right">
+    <div class="code">RG-P-01-01</div>
+    <div class="date">Generado: ${fechaGen} ${horaGen}</div>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat s-total"><div class="stat-label">Total</div><div class="stat-val">${docs.length}</div></div>
+  <div class="stat s-vig"><div class="stat-label">Vigentes</div><div class="stat-val">${docs.filter(d=>d.estado==='Vigente').length}</div></div>
+  <div class="stat s-des"><div class="stat-label">Desact.</div><div class="stat-val">${docs.filter(d=>d.estado==='Desactualizado').length}</div></div>
+  <div class="stat s-pend"><div class="stat-label">Pendientes</div><div class="stat-val">${docs.filter(d=>d.estado==='Pendiente').length}</div></div>
+  <div class="stat s-rev"><div class="stat-label">En Revisión</div><div class="stat-val">${docs.filter(d=>d.estado==='En Revisión').length}</div></div>
+</div>
+<div class="content">
+<table>
+  <thead><tr>
+    <th style="width:110px">Código</th>
+    <th>Nombre del Documento</th>
+    <th style="width:110px;text-align:center">Tipo</th>
+    <th style="width:90px;text-align:center">Revisión</th>
+    <th style="width:90px;text-align:center">Fecha</th>
+    <th style="width:100px;text-align:center">Estado</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr><td colspan="6">${docs.length} documentos · Generado el ${fechaGen} a las ${horaGen} · PETROSAR SA – SGI</td></tr></tfoot>
+</table>
+</div>
+<div class="footer">Este listado fue generado automáticamente desde el Sistema de Gestión Integrado de PETROSAR SA. Fecha de generación: ${fechaGen} ${horaGen}</div>
+<script>window.onload=()=>{ const p=document.createElement('button'); p.textContent='🖨️ Imprimir / Guardar PDF'; p.style.cssText='position:fixed;top:12px;right:16px;padding:8px 16px;background:#e8a020;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;font-family:inherit;z-index:999'; p.onclick=()=>window.print(); document.body.appendChild(p); }<\/script>
+</body></html>`;
+
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RG-P-01-01_Listado_Informacion_Documentada_${fechaGen.replace(/\//g,'-')}.html`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    toast('ok', `Listado generado con ${docs.length} documentos`);
+
+  }catch(e){ toast('err','Error: '+e.message); }
+  finally{
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Generar Listado Actualizado';
+  }
+}
+
+
+function openAddFileModal(){
+  selectedFiles.af=[];
+  document.getElementById('afFileChips').innerHTML='';
+  openModal('modalAddFile');
+}
+async function submitAddFile(){
+  if(selectedFiles.af.length===0){ toast('err','Seleccioná al menos un archivo'); return; }
+  const btn=document.getElementById('btnSubmitAddFile');
+  btn.disabled=true; btn.textContent='Subiendo…';
+  try{
+    await uploadFiles(carpetaDocId, selectedFiles.af);
+    closeModal('modalAddFile');
+    toast('ok','Archivo(s) subido(s)');
+    await loadCarpetaFiles();
+    // Update area view files count
+    if(AREAS.includes(currentView)) loadArea(currentView);
+  }catch(e){ toast('err','Error: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Subir'; }
+}
+
+// ── FILE OPERATIONS ────────────────────────────────────────────────────
+async function uploadFiles(docId, files){
+  for(const file of files){
+    const ext=file.name.split('.').pop();
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=`${docId}/${Date.now()}_${safeName}`;
+    const {error:ue}=await sb.storage.from(BUCKET).upload(path, file, {contentType:file.type, upsert:false});
+    if(ue) throw ue;
+    const {error:de}=await sb.from('sgi_archivos').insert({doc_id:docId,filename:file.name,storage_path:path,size:file.size,mime_type:file.type});
+    if(de) throw de;
+  }
+}
+
+let viewerCurrentUrl = '';
+let viewerCurrentFilename = '';
+let viewerCanDownload = false;
+
+async function viewFile(storagePath, filename){
+  const isEditableFormat=['.doc','.docx','.xls','.xlsx','.csv'].includes('.'+filename.split('.').pop().toLowerCase());
+  const canDownload = isAdmin || !isEditableFormat;
+  viewerCurrentFilename = filename;
+  viewerCanDownload = canDownload;
+  document.getElementById('viewerFilename').textContent = filename;
+  document.getElementById('viewerDownloadBtn').style.display = canDownload ? 'inline-flex' : 'none';
+  document.getElementById('viewerBody').innerHTML = '<div class="loading-row" style="color:rgba(255,255,255,.5)"><div class="spinner"></div>Cargando&hellip;</div>';
+  openModal('modalViewer');
+
+  try{
+    const {data} = sb.storage.from(BUCKET).getPublicUrl(storagePath);
+    const url = data?.publicUrl || '';
+    viewerCurrentUrl = url;
+    const ext = '.' + filename.split('.').pop().toLowerCase();
+    const isImage = ['.png','.jpg','.jpeg','.gif','.webp'].includes(ext);
+    const isPdf = ext === '.pdf';
+    const isHtml = ext === '.html';
+    const isOffice = ['.doc','.docx','.xls','.xlsx','.ppt','.pptx'].includes(ext);
+    const isCsv = ext === '.csv';
+
+    if(isPdf){
+      document.getElementById('viewerBody').innerHTML =
+        `<embed src="${url}#toolbar=1&navpanes=0" type="application/pdf" style="width:100%;height:100%;border:none">`;
+    } else if(isImage){
+      document.getElementById('viewerBody').innerHTML =
+        `<img src="${url}" alt="${escHTML(filename)}" style="max-width:100%;max-height:100%;object-fit:contain;padding:16px">`;
+    } else if(isHtml){
+      document.getElementById('viewerBody').innerHTML =
+        `<iframe src="${url}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`;
+    } else if(isOffice){
+      // Microsoft Office Online viewer
+      const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url);
+      document.getElementById('viewerBody').innerHTML =
+        `<iframe src="${officeUrl}" style="width:100%;height:100%;border:none;background:#fff"></iframe>`;
+    } else if(isCsv){
+      // Fetch and render CSV as table
+      const resp = await fetch(url);
+      const text = await resp.text();
+      const rows = text.trim().split('\n').map(r => r.split(','));
+      const thead = rows[0].map(c => `<th style="padding:8px 12px;background:#f8fafc;font-size:.75rem;font-weight:700;color:#374151;border-bottom:2px solid #e5e7eb;white-space:nowrap">${escHTML(c.trim())}</th>`).join('');
+      const tbody = rows.slice(1).map((r,i) =>
+        `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">${r.map(c=>`<td style="padding:7px 12px;font-size:.8rem;border-bottom:1px solid #f3f4f6;color:#374151">${escHTML(c.trim())}</td>`).join('')}</tr>`
+      ).join('');
+      document.getElementById('viewerBody').innerHTML =
+        `<div style="overflow:auto;width:100%;height:100%;background:#fff"><table style="border-collapse:collapse;width:100%"><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+    } else {
+      document.getElementById('viewerBody').innerHTML =
+        `<div style="text-align:center;color:rgba(255,255,255,.6);padding:60px 30px">
+          <div style="font-size:3.5rem;margin-bottom:16px">📎</div>
+          <div style="font-size:.95rem;margin-bottom:20px">No se puede previsualizar este tipo de archivo.</div>
+          ${canDownload ? `<button class="btn btn-amber" onclick="downloadFromViewer()">&#x2B07;&#xFE0F; Descargar</button>` : '<div style="font-size:.85rem;color:#f59e0b;background:rgba(245,158,11,.1);padding:10px 18px;border-radius:8px">&#x1F512; Solo el administrador puede descargar este archivo.</div>'}
+        </div>`;
+    }
+  }catch(e){
+    document.getElementById('viewerBody').innerHTML = `<div style="color:#ef4444;padding:30px;text-align:center">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+function downloadFromViewer(){
+  if(!viewerCurrentUrl) return;
+  const a = document.createElement('a');
+  a.href = viewerCurrentUrl;
+  a.download = viewerCurrentFilename;
+  a.target = '_blank';
+  a.click();
+}
+
+async function downloadFile(storagePath, filename){
+  try{
+    const {data}=sb.storage.from(BUCKET).getPublicUrl(storagePath);
+    if(data && data.publicUrl){
+      const a=document.createElement('a'); a.href=data.publicUrl; a.target='_blank'; a.download=filename; a.click();
+    } else {
+      // Fallback: signed URL
+      const {data:sd, error}=await sb.storage.from(BUCKET).createSignedUrl(storagePath,60);
+      if(error) throw error;
+      const a=document.createElement('a'); a.href=sd.signedUrl; a.target='_blank'; a.download=filename; a.click();
+    }
+  }catch(e){ toast('err','Error al descargar: '+e.message); }
+}
+
+async function deleteFile(fileId, storagePath, filename){
+  if(!confirm(`¿Eliminar el archivo "${filename}"?`)) return;
+  try{
+    await sb.storage.from(BUCKET).remove([storagePath]);
+    const {error}=await sb.from('sgi_archivos').delete().eq('id',fileId);
+    if(error) throw error;
+    toast('ok','Archivo eliminado');
+    loadCarpetaFiles();
+  }catch(e){ toast('err','Error: '+e.message); }
+}
+
+// ── DRAG & DROP / FILE SELECT ──────────────────────────────────────────
+function dzOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function dzLeave(id){ document.getElementById(id).classList.remove('over'); }
+function dzDrop(e,id,ctx){ e.preventDefault(); dzLeave(id); addFilesToCtx(Array.from(e.dataTransfer.files),ctx); }
+function onFilesSelected(input,ctx){ addFilesToCtx(Array.from(input.files),ctx); input.value=''; }
+function addFilesToCtx(files,ctx){
+  selectedFiles[ctx].push(...files);
+  renderFileChips(ctx);
+}
+function removeFile(ctx,idx){ selectedFiles[ctx].splice(idx,1); renderFileChips(ctx); }
+function renderFileChips(ctx){
+  const el=document.getElementById(ctx+'FileChips');
+  if(!el) return;
+  el.innerHTML=selectedFiles[ctx].map((f,i)=>`
+    <div class="file-chip">
+      <span style="font-size:1rem">${fileIcon(f.name)}</span>
+      <span class="file-chip-name">${escHTML(f.name)}</span>
+      <span class="file-chip-size">${formatSize(f.size)}</span>
+      <button class="file-chip-rm" onclick="removeFile('${ctx}',${i})">×</button>
+    </div>`).join('');
+}
+
+// ── SETUP ─────────────────────────────────────────────────────────────
+function openSetupModal(){ openModal('modalSetup'); }
+function copySQL(){
+  navigator.clipboard.writeText(document.getElementById('sqlBlock').textContent).then(()=>toast('ok','SQL copiado al portapapeles'));
+}
+async function testConnection(){
+  const el=document.getElementById('testResult');
+  el.style.display='block'; el.textContent='Probando…'; el.style.color='#6b7280';
+  try{
+    const {error:e1}=await sb.from('sgi_documentos').select('id').limit(1);
+    const {error:e2}=await sb.from('sgi_archivos').select('id').limit(1);
+    const {data:bd}=await sb.storage.from(BUCKET).list('',{limit:1});
+    if(e1) throw new Error('Tabla sgi_documentos: '+e1.message);
+    if(e2) throw new Error('Tabla sgi_archivos: '+e2.message);
+    if(!bd && bd!==null) throw new Error('Bucket "sgi-docs" no encontrado');
+    el.textContent='✅ Conexión exitosa. Tablas y bucket OK.'; el.style.color='#166534';
+    toast('ok','Todo configurado correctamente');
+  }catch(e){
+    el.textContent='❌ '+e.message; el.style.color='#991b1b';
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).style.display='flex'; document.body.style.overflow='hidden'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; document.body.style.overflow=''; }
+function escHTML(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function formatSize(bytes){ if(!bytes) return ''; if(bytes<1024) return bytes+'B'; if(bytes<1048576) return (bytes/1024).toFixed(1)+'KB'; return (bytes/1048576).toFixed(1)+'MB'; }
+function fileIcon(name){ const ext=('.'+name.split('.').pop().toLowerCase()); const m={'.pdf':'📄','.xlsx':'📊','.xls':'📊','.csv':'📊','.doc':'📝','.docx':'📝','.html':'🌐','.png':'🖼️','.jpg':'🖼️','.jpeg':'🖼️'}; return m[ext]||'📎'; }
+
+let toastTimer=null;
+function toast(type,msg){
+  const existing=document.querySelector('.toast');
+  if(existing) existing.remove();
+  if(toastTimer) clearTimeout(toastTimer);
+  const el=document.createElement('div');
+  el.className=`toast t-${type}`;
+  el.textContent=msg;
+  document.body.appendChild(el);
+  toastTimer=setTimeout(()=>el.remove(),3500);
+}
+
+// ── IMPORT EXCEL ──────────────────────────────────────────────────────
+let importData = [];
+
+function openImportModal(){
+  importData = [];
+  document.getElementById('importFileName').textContent = '';
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importProgress').style.display = 'none';
+  document.getElementById('btnDoImport').style.display = 'none';
+  openModal('modalImport');
+}
+
+function importDrop(e){
+  e.preventDefault();
+  dzLeave('importDropZone');
+  const file = e.dataTransfer.files[0];
+  if(file) parseImportFile(file);
+}
+
+function onImportFileSelected(input){
+  const file = input.files[0];
+  if(file) parseImportFile(file);
+  input.value = '';
+}
+
+function parseImportFile(file){
+  if(!file.name.endsWith('.xlsx')){ toast('err','Solo se aceptan archivos .xlsx'); return; }
+  document.getElementById('importFileName').textContent = '📊 ' + file.name;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      // Find header row — look for row containing "codigo" or "Código"
+      let headerRow = -1;
+      for(let i=0;i<Math.min(10,raw.length);i++){
+        const rowStr = raw[i].join('|').toLowerCase();
+        if(rowStr.includes('c') && rowStr.includes('digo') || rowStr.includes('nombre')){
+          headerRow = i; break;
+        }
+      }
+      if(headerRow === -1) headerRow = 3; // default fila 4 (0-indexed)
+
+      // Normalize header: remove accents, special chars, lowercase
+      const normalizeH = h => {
+        if(!h) return '';
+        let s = String(h).toLowerCase().trim();
+        s = s.normalize("NFD").replace(/\p{Mn}/gu, "");
+        s = s.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        return s;
+      };
+      const headers = raw[headerRow].map(normalizeH);
+
+      // Find value by partial key match
+      const findVal = (obj, ...keys) => {
+        for(const k of keys){
+          for(const h of Object.keys(obj)){
+            if(h === k || h.startsWith(k) || h.includes(k)) return obj[h];
+          }
+        }
+        return '';
+      };
+
+      importData = [];
+      const errors = [];
+
+      for(let i = headerRow+1; i < raw.length; i++){
+        const row = raw[i];
+        if(row.every(c => c === '' || c === null || c === undefined)) continue;
+
+        const obj = {};
+        headers.forEach((h,idx) => { if(h) obj[h] = String(row[idx]||'').trim(); });
+
+        const codigo  = findVal(obj,'codigo','code');
+        const nombre  = findVal(obj,'nombre','name','documento');
+        const area    = findVal(obj,'area');
+        const tipo    = findVal(obj,'tipo','type') || 'Otro';
+        const estado  = findVal(obj,'estado','status') || 'Vigente';
+        let   fecha   = findVal(obj,'fecha','date');
+        const revision= findVal(obj,'revision','rev');
+
+        // Normalize fecha
+        if(fecha && fecha.includes('/')){
+          const parts = fecha.split('/');
+          if(parts.length === 3){
+            if(parts[2].length === 4) fecha = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            else fecha = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+          }
+        }
+        if(fecha && fecha.length > 10) fecha = fecha.substring(0,10);
+
+        if(!codigo || !nombre){
+          errors.push(`Fila ${i+1}: falta código o nombre`);
+          continue;
+        }
+
+        const validAreas = ['gestion','reg-gestion','transporte','produccion','construcciones','lab-plantas','mediciones','ssa','reg-operativos'];
+        const areaNorm = area.toLowerCase().replace(/\s+/g,'-').replace(/[áa]/g,'a').replace(/[éeé]/g,'e').replace(/[íi]/g,'i').replace(/[óo]/g,'o').replace(/[úu]/g,'u');
+        const areaFinal = validAreas.find(a => a === areaNorm || a === area.toLowerCase()) || area.toLowerCase();
+
+        importData.push({ codigo, nombre, area: areaFinal, tipo, estado, fecha: fecha||null, revision: revision||null });
+      }
+
+      // Show preview
+      renderImportPreview(importData, errors);
+    }catch(err){
+      toast('err','Error al leer el archivo: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderImportPreview(data, errors){
+  const previewEl = document.getElementById('importPreview');
+  previewEl.style.display = 'block';
+
+  document.getElementById('importCount').textContent = data.length + ' documentos listos';
+  document.getElementById('btnDoImport').style.display = data.length > 0 ? 'inline-flex' : 'none';
+  document.getElementById('btnImportCount').textContent = '(' + data.length + ')';
+
+  // Headers
+  const cols = ['codigo','nombre','area','tipo','estado','fecha'];
+  const headEl = document.getElementById('importPreviewHead');
+  headEl.innerHTML = cols.map(c => `<th style="padding:7px 10px;text-align:left;font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">${c}</th>`).join('');
+
+  // Rows (max 8 preview)
+  const bodyEl = document.getElementById('importPreviewBody');
+  const preview = data.slice(0,8);
+  bodyEl.innerHTML = preview.map((r,i) =>
+    `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+      ${cols.map(c => `<td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;color:#374151;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHTML(r[c]||'—')}</td>`).join('')}
+    </tr>`
+  ).join('');
+  if(data.length > 8) bodyEl.innerHTML += `<tr><td colspan="6" style="padding:8px 10px;text-align:center;color:#9ca3af;font-size:.75rem">... y ${data.length-8} más</td></tr>`;
+
+  // Errors
+  const errEl = document.getElementById('importErrors');
+  if(errors.length > 0){
+    errEl.style.display = 'block';
+    errEl.innerHTML = '<strong>Filas omitidas (' + errors.length + '):</strong><br>' + errors.join('<br>');
+  } else {
+    errEl.style.display = 'none';
+  }
+}
+
+async function doImport(){
+  if(importData.length === 0) return;
+  const btn = document.getElementById('btnDoImport');
+  btn.disabled = true;
+  document.getElementById('importProgress').style.display = 'block';
+  const bar = document.getElementById('importProgressBar');
+  const txt = document.getElementById('importProgressText');
+
+  txt.textContent = 'Verificando duplicados...';
+  bar.style.width = '5%';
+
+  const {data: existing} = await sb.from('sgi_documentos').select('codigo,nombre');
+  const existCodigos = new Set((existing||[]).map(r => r.codigo.toLowerCase().trim()));
+  const existNombres = new Set((existing||[]).map(r => r.nombre.toLowerCase().trim()));
+
+  const excelCodigos = new Set();
+  const excelNombres = new Set();
+  let done = 0, skipped = 0, insertErrors = 0;
+  const skipReasons = [];
+
+  for(const doc of importData){
+    const codLow = doc.codigo.toLowerCase().trim();
+    const nomLow = doc.nombre.toLowerCase().trim();
+
+    if(existCodigos.has(codLow)){
+      skipReasons.push('"' + doc.codigo + '" — código ya existe en el sistema');
+      skipped++; done++; continue;
+    }
+    if(existNombres.has(nomLow)){
+      skipReasons.push('"' + doc.nombre + '" — nombre ya existe en el sistema');
+      skipped++; done++; continue;
+    }
+    if(excelCodigos.has(codLow)){
+      skipReasons.push('"' + doc.codigo + '" — código duplicado en el archivo');
+      skipped++; done++; continue;
+    }
+    if(excelNombres.has(nomLow)){
+      skipReasons.push('"' + doc.nombre + '" — nombre duplicado en el archivo');
+      skipped++; done++; continue;
+    }
+
+    excelCodigos.add(codLow);
+    excelNombres.add(nomLow);
+
+    try{
+      const {error} = await sb.from('sgi_documentos').insert(doc);
+      if(error) throw error;
+    }catch(e){ insertErrors++; console.error(e); }
+
+    done++;
+    bar.style.width = Math.max(Math.round((done/importData.length)*100), 8) + '%';
+    txt.textContent = 'Importando... ' + done + ' / ' + importData.length;
+  }
+
+  const imported = done - skipped - insertErrors;
+  bar.style.background = (skipped > 0 || insertErrors > 0) ? '#f59e0b' : '#22c55e';
+  let summary = '✅ ' + imported + ' documentos importados.';
+  if(skipped > 0) summary += ' ⚠️ ' + skipped + ' omitidos por duplicado.';
+  if(insertErrors > 0) summary += ' ❌ ' + insertErrors + ' errores.';
+  txt.textContent = summary;
+
+  if(skipReasons.length > 0){
+    const errEl = document.getElementById('importErrors');
+    errEl.style.display = 'block';
+    errEl.innerHTML = '<strong>Omitidos por duplicado (' + skipped + '):</strong><br>' + skipReasons.slice(0,20).join('<br>') + (skipReasons.length > 20 ? '<br>...y ' + (skipReasons.length-20) + ' más' : '');
+  }
+
+  btn.disabled = false;
+  loadDashboard();
+  if(AREAS.includes(currentView)) loadArea(currentView);
+
+  if(skipped === 0 && insertErrors === 0){
+    setTimeout(()=>{ closeModal('modalImport'); toast('ok', imported + ' documentos importados'); }, 1500);
+  }
+}
+
+</script>
+</body>
+</html>
