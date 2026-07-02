@@ -967,6 +967,7 @@ function adminLogout(){
 
 // ── ADD DOC ───────────────────────────────────────────────────────────
 function openAddModal(){
+  populateAreaSelects();
   selectedFiles.add=[];
   document.getElementById('addFileChips').innerHTML='';
   ['addArea','addCodigo','addNombre','addFecha','addRevision'].forEach(id=>document.getElementById(id).value='');
@@ -1010,6 +1011,7 @@ async function submitAdd(){
 
 // ── EDIT DOC ──────────────────────────────────────────────────────────
 async function openEditModal(id){
+  populateAreaSelects();
   editDocId=id;
   selectedFiles.edit=[];
   document.getElementById('editFileChips').innerHTML='';
