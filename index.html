@@ -189,6 +189,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3
   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
   Modo administrador activo
   <span style="margin-left:auto;cursor:pointer;text-decoration:underline" onclick="adminLogout()">Salir</span>
+  <span style="margin-left:16px;cursor:pointer;text-decoration:underline;color:#e8a020" onclick="openAreasModal()">⚙️ Gestionar Áreas</span>
 </div>
 
 <!-- HEADER -->
@@ -315,7 +316,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3
     <div class="modal-hdr"><span class="modal-hdr-title">Agregar Nuevo Documento</span><button class="modal-close" onclick="closeModal('modalAdd')">×</button></div>
     <div class="modal-body">
       <div class="g2">
-        <div class="fg"><label>Área *</label><select class="fi" id="addArea"><option value="">Seleccionar…</option><option value="gestion">Gestión</option><option value="reg-gestion">Reg. Gestión</option><option value="transporte">Transporte</option><option value="produccion">Producción</option><option value="construcciones">Construcciones</option><option value="lab-plantas">Lab. y Plantas</option><option value="mediciones">Mediciones</option><option value="ssa">SSA</option><option value="reg-operativos">Reg. Operativos</option></select></div>
+        <div class="fg"><label>Área *</label><select class="fi" id="addArea"><option value="">Seleccionar…</option></select></div>
         <div class="fg"><label>Código *</label><input type="text" class="fi" id="addCodigo" placeholder="Ej: DOC-001"></div>
       </div>
       <div class="fg"><label>Nombre del Documento *</label><input type="text" class="fi" id="addNombre" placeholder="Nombre completo del documento"></div>
@@ -355,7 +356,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3
     <div class="modal-body">
       <input type="hidden" id="editId">
       <div class="g2">
-        <div class="fg"><label>Área *</label><select class="fi" id="editArea"><option value="">Seleccionar…</option><option value="gestion">Gestión</option><option value="reg-gestion">Reg. Gestión</option><option value="transporte">Transporte</option><option value="produccion">Producción</option><option value="construcciones">Construcciones</option><option value="lab-plantas">Lab. y Plantas</option><option value="mediciones">Mediciones</option><option value="ssa">SSA</option><option value="reg-operativos">Reg. Operativos</option></select></div>
+        <div class="fg"><label>Área *</label><select class="fi" id="editArea"><option value="">Seleccionar…</option></select></div>
         <div class="fg"><label>Código *</label><input type="text" class="fi" id="editCodigo"></div>
       </div>
       <div class="fg"><label>Nombre del Documento *</label><input type="text" class="fi" id="editNombre"></div>
@@ -560,6 +561,58 @@ ALTER TABLE sgi_archivos   DISABLE ROW LEVEL SECURITY;</div>
   </div>
 </div>
 
+<!-- ÁREAS MODAL -->
+<div class="modal" id="modalAreas" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalAreas')"></div>
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-hdr"><span class="modal-hdr-title">⚙️ Gestión de Áreas</span><button class="modal-close" onclick="closeModal('modalAreas')">×</button></div>
+    <div class="modal-body">
+
+      <!-- Nueva área -->
+      <div style="background:#f0f2f6;border-radius:10px;padding:16px;margin-bottom:18px">
+        <p style="font-size:.83rem;font-weight:700;color:#1e2d3e;margin-bottom:12px">➕ Nueva Área</p>
+        <div class="g3">
+          <div class="fg" style="margin-bottom:0"><label>Código</label><input type="text" class="fi" id="newAreaCodigo" placeholder="ej: calidad"></div>
+          <div class="fg" style="margin-bottom:0"><label>Nombre</label><input type="text" class="fi" id="newAreaNombre" placeholder="ej: Calidad"></div>
+          <div class="fg" style="margin-bottom:0"><label>Orden</label><input type="number" class="fi" id="newAreaOrden" placeholder="10"></div>
+        </div>
+        <button class="btn btn-amber" style="margin-top:12px" onclick="addNewArea()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Crear Área
+        </button>
+      </div>
+
+      <!-- Lista de áreas -->
+      <p style="font-size:.83rem;font-weight:700;color:#1e2d3e;margin-bottom:10px">Áreas existentes</p>
+      <div class="table-wrap" style="margin-bottom:14px">
+        <table class="tbl">
+          <thead><tr><th>Código</th><th>Nombre</th><th>Acciones</th></tr></thead>
+          <tbody id="areasTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Edit form inline -->
+      <div id="areaEditForm" style="display:none;background:#fff3cd;border-radius:10px;padding:16px;border:1px solid #fbbf24">
+        <p style="font-size:.83rem;font-weight:700;color:#92600a;margin-bottom:12px">✏️ Editar Área</p>
+        <input type="hidden" id="editAreaId">
+        <div class="g3">
+          <div class="fg" style="margin-bottom:0"><label>Código</label><input type="text" class="fi" id="editAreaCodigo"></div>
+          <div class="fg" style="margin-bottom:0"><label>Nombre</label><input type="text" class="fi" id="editAreaNombre"></div>
+          <div class="fg" style="margin-bottom:0"><label>Orden</label><input type="number" class="fi" id="editAreaOrden"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-amber" onclick="saveAreaEdit()">Guardar</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('areaEditForm').style.display='none'">Cancelar</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAreas')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- FILE VIEWER MODAL -->
 <div class="modal" id="modalViewer" style="display:none">
   <div class="modal-bg" onclick="closeModal('modalViewer')"></div>
@@ -587,8 +640,8 @@ const SUPA_URL    = 'https://ahapckaovtgnxhwyuetw.supabase.co';
 const SUPA_KEY    = 'sb_publishable_TKbj-awpHudWIXSWprQhEg_OB8-urlg';
 const ADMIN_PASS  = 'Petrosar103!';   // <-- cambiá la contraseña aquí
 const BUCKET      = 'sgi-docs';
-const AREAS = ['gestion','reg-gestion','transporte','produccion','construcciones','lab-plantas','mediciones','ssa','reg-operativos'];
-const AREA_LABELS = {gestion:'Gestión','reg-gestion':'Reg. Gestión',transporte:'Transporte',produccion:'Producción',construcciones:'Construcciones','lab-plantas':'Lab. y Plantas',mediciones:'Mediciones',ssa:'SSA','reg-operativos':'Reg. Operativos'};
+let AREAS = ['gestion','reg-gestion','transporte','produccion','construcciones','lab-plantas','mediciones','ssa','reg-operativos'];
+let AREA_LABELS = {gestion:'Gestión','reg-gestion':'Reg. Gestión',transporte:'Transporte',produccion:'Producción',construcciones:'Construcciones','lab-plantas':'Lab. y Plantas',mediciones:'Mediciones',ssa:'SSA','reg-operativos':'Reg. Operativos'};
 
 // ── STATE ────────────────────────────────────────────────────────────
 let sb, isAdmin=false, currentView='dashboard';
@@ -601,7 +654,7 @@ let editDocId=null;
 document.addEventListener('DOMContentLoaded', ()=>{
   const { createClient } = supabase;
   sb = createClient(SUPA_URL, SUPA_KEY);
-  loadDashboard();
+  loadAreas().then(()=>loadDashboard());
 });
 
 // ── VIEWS ─────────────────────────────────────────────────────────────
@@ -760,7 +813,123 @@ document.addEventListener('keydown', function(e){
   }
 });
 
-// ── TOGGLE URL SISTEMA FIELD ──────────────────────────────────────────
+// ── AREAS DINÁMICAS ────────────────────────────────────────────────────
+async function loadAreas(){
+  try{
+    const {data,error} = await sb.from('sgi_areas').select('*').order('orden');
+    if(error||!data||data.length===0) return; // use defaults
+    AREAS = data.map(a=>a.codigo);
+    AREA_LABELS = {};
+    data.forEach(a=>{ AREA_LABELS[a.codigo]=a.nombre; });
+    renderTabs();
+    renderAreaViews();
+    populateAreaSelects();
+  }catch(e){ console.error('loadAreas:',e); }
+}
+
+function renderTabs(){
+  const tabsBar = document.getElementById('tabsBar');
+  const dashTab = `<button class="tab active" data-view="dashboard" onclick="showView('dashboard',this)">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Dashboard
+  </button>`;
+  const areaTabs = AREAS.map(a=>`<button class="tab" data-view="${a}" onclick="showView('${a}',this)">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${AREA_LABELS[a]||a}
+  </button>`).join('');
+  tabsBar.innerHTML = dashTab + areaTabs;
+}
+
+function renderAreaViews(){
+  const main = document.querySelector('main.page');
+  // Remove old area views
+  document.querySelectorAll('.view[id^="view-"]:not(#view-dashboard)').forEach(el=>el.remove());
+  // Add new ones
+  AREAS.forEach(a=>{
+    const div = document.createElement('div');
+    div.className='view';
+    div.id='view-'+a;
+    main.appendChild(div);
+  });
+}
+
+// ── GESTIÓN DE ÁREAS ───────────────────────────────────────────────────
+async function openAreasModal(){
+  openModal('modalAreas');
+  await loadAreasTable();
+}
+
+async function loadAreasTable(){
+  const tbody = document.getElementById('areasTableBody');
+  tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:20px;color:#9ca3af"><div style="display:flex;align-items:center;justify-content:center;gap:8px"><div class="spinner"></div>Cargando…</div></td></tr>';
+  const {data,error} = await sb.from('sgi_areas').select('*').order('orden');
+  if(error){ tbody.innerHTML='<tr><td colspan="3" style="color:#ef4444;padding:16px">Error: '+error.message+'</td></tr>'; return; }
+  tbody.innerHTML = (data||[]).map(a=>`
+    <tr>
+      <td style="padding:10px 14px;font-weight:700;color:#1e2d3e;font-size:.85rem">${escHTML(a.codigo)}</td>
+      <td style="padding:10px 14px;font-size:.85rem">${escHTML(a.nombre)}</td>
+      <td style="padding:10px 14px">
+        <div style="display:flex;gap:6px">
+          <button class="btn-ghost blue" onclick="editAreaInline('${a.id}','${escHTML(a.codigo)}','${escHTML(a.nombre)}',${a.orden})">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-ghost red" onclick="deleteArea('${a.id}','${escHTML(a.nombre)}')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function editAreaInline(id, codigo, nombre, orden){
+  document.getElementById('editAreaId').value = id;
+  document.getElementById('editAreaCodigo').value = codigo;
+  document.getElementById('editAreaNombre').value = nombre;
+  document.getElementById('editAreaOrden').value = orden;
+  document.getElementById('areaEditForm').style.display='block';
+  document.getElementById('areaEditForm').scrollIntoView({behavior:'smooth'});
+}
+
+async function saveAreaEdit(){
+  const id = document.getElementById('editAreaId').value;
+  const codigo = document.getElementById('editAreaCodigo').value.trim().toLowerCase().replace(/\s+/g,'-');
+  const nombre = document.getElementById('editAreaNombre').value.trim();
+  const orden = parseInt(document.getElementById('editAreaOrden').value)||0;
+  if(!codigo||!nombre){ toast('err','Completá código y nombre'); return; }
+  const {error} = await sb.from('sgi_areas').update({codigo,nombre,orden}).eq('id',id);
+  if(error){ toast('err','Error: '+error.message); return; }
+  toast('ok','Área actualizada');
+  document.getElementById('areaEditForm').style.display='none';
+  await loadAreasTable();
+  await loadAreas();
+}
+
+async function addNewArea(){
+  const codigo = document.getElementById('newAreaCodigo').value.trim().toLowerCase().replace(/\s+/g,'-');
+  const nombre = document.getElementById('newAreaNombre').value.trim();
+  const orden = parseInt(document.getElementById('newAreaOrden').value)||99;
+  if(!codigo||!nombre){ toast('err','Completá código y nombre'); return; }
+  const {error} = await sb.from('sgi_areas').insert({codigo,nombre,orden});
+  if(error){ toast('err','Error: '+(error.message.includes('unique')?'Ese código ya existe':error.message)); return; }
+  toast('ok','Área "'+nombre+'" creada');
+  document.getElementById('newAreaCodigo').value='';
+  document.getElementById('newAreaNombre').value='';
+  document.getElementById('newAreaOrden').value='';
+  await loadAreasTable();
+  await loadAreas();
+}
+
+async function deleteArea(id, nombre){
+  // Check if area has documents
+  const area = AREAS.find(a=>a);
+  const {data:docs} = await sb.from('sgi_documentos').select('id').eq('area', id).limit(1);
+  if(!confirm('¿Eliminar el área "'+nombre+'"?\nSolo se puede eliminar si no tiene documentos asociados.')) return;
+  const {error} = await sb.from('sgi_areas').delete().eq('id',id);
+  if(error){ toast('err','Error: '+error.message); return; }
+  toast('ok','Área eliminada');
+  await loadAreasTable();
+  await loadAreas();
+}
+
+
 function toggleUrlField(ctx, estado){
   const grp = document.getElementById(ctx+'UrlSistemaGroup');
   if(grp) grp.style.display = estado === 'Automatizado' ? 'block' : 'none';
