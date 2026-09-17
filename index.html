@@ -1354,8 +1354,9 @@ async function uploadFiles(docId, files, carpeta=''){
   for(const file of files){
     const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
     const folder = carpeta ? `${docId}/${carpeta}` : `${docId}`;
-    const path=`${folder}/${Date.now()}_${safeName}`;
-    const {error:ue}=await sb.storage.from(BUCKET).upload(path, file, {contentType:file.type, upsert:false});
+    const rand = Math.random().toString(36).substring(2,7);
+    const path=`${folder}/${Date.now()}_${rand}_${safeName}`;
+    const {error:ue}=await sb.storage.from(BUCKET).upload(path, file, {contentType:file.type, upsert:true});
     if(ue) throw ue;
     const {error:de}=await sb.from('sgi_archivos').insert({doc_id:docId,filename:file.name,storage_path:path,size:file.size,mime_type:file.type,carpeta:carpeta||''});
     if(de) throw de;
