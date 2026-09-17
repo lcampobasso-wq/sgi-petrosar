@@ -416,6 +416,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3
     <div class="modal-hdr"><span class="modal-hdr-title">Subir Archivo</span><button class="modal-close" onclick="closeModal('modalAddFile')">×</button></div>
     <div class="modal-body">
       <div class="fg">
+        <label>Carpeta <span style="color:#9ca3af;font-weight:400">(opcional — ej: 2026, Rev01, Vigente)</span></label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="text" class="fi" id="afCarpeta" placeholder="ej: 2026" style="flex:1">
+          <div id="afCarpetaSuggestions" style="display:none;position:absolute;background:#fff;border:1px solid #d1d5db;border-radius:8px;z-index:100;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+        </div>
+      </div>
+      <div class="fg">
         <div class="upload-zone" id="afDropZone" onclick="document.getElementById('afFileInput').click()" ondragover="dzOver(event,'afDropZone')" ondragleave="dzLeave('afDropZone')" ondrop="dzDrop(event,'afDropZone','af')">
           <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 6px;display:block"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <p class="upload-zone-text">Seleccionar archivo(s)</p>
@@ -1116,7 +1123,33 @@ async function loadCarpetaFiles(){
 function renderCarpetaFiles(files){
   const body=document.getElementById('carpetaBody');
   if(files.length===0){ body.innerHTML='<div class="empty"><div class="empty-icon">📂</div><div class="empty-txt">No hay archivos. Subí el primer archivo con el botón de abajo.</div></div>'; return; }
-  body.innerHTML=`<div class="carpeta-list">${files.map(f=>carpetaFileHTML(f)).join('')}</div>`;
+
+  // Group by carpeta
+  const groups = {};
+  files.forEach(f=>{
+    const key = f.carpeta || '';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(f);
+  });
+
+  const keys = Object.keys(groups).sort((a,b)=> b.localeCompare(a)); // desc
+  let html = '';
+  keys.forEach(key=>{
+    if(key){
+      html += `<div style="display:flex;align-items:center;gap:8px;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">
+        <span style="font-size:1rem">📁</span>
+        <span style="font-size:.8rem;font-weight:700;color:#1e2d3e;letter-spacing:.3px">${escHTML(key)}</span>
+        <span style="font-size:.72rem;color:#9ca3af">(${groups[key].length} archivo${groups[key].length===1?'':'s'})</span>
+      </div>`;
+    } else {
+      html += `<div style="font-size:.75rem;color:#9ca3af;margin:10px 0 4px">Sin carpeta</div>`;
+    }
+    html += `<div class="carpeta-list" style="margin-left:${key?'16px':'0'}">${groups[key].map(f=>carpetaFileHTML(f)).join('')}</div>`;
+  });
+  body.innerHTML = html;
+
+  // Collect existing carpetas for autocomplete
+  window._carpetasExistentes = [...new Set(files.map(f=>f.carpeta).filter(Boolean))];
 }
 
 function carpetaFileHTML(f){
@@ -1282,14 +1315,31 @@ async function generarListado(){
 function openAddFileModal(){
   selectedFiles.af=[];
   document.getElementById('afFileChips').innerHTML='';
+  document.getElementById('afCarpeta').value='';
+  // Setup autocomplete for existing carpetas
+  const input = document.getElementById('afCarpeta');
+  input.oninput = function(){
+    const val = this.value.toLowerCase();
+    const existing = window._carpetasExistentes || [];
+    const matches = existing.filter(c=>c.toLowerCase().includes(val) && c.toLowerCase()!==val);
+    const sug = document.getElementById('afCarpetaSuggestions');
+    if(matches.length && val){
+      sug.style.display='block';
+      sug.innerHTML = matches.map(m=>`<div style="padding:7px 12px;cursor:pointer;font-size:.82rem;hover:background:#f3f4f6" onmousedown="document.getElementById('afCarpeta').value='${escHTML(m)}';document.getElementById('afCarpetaSuggestions').style.display='none'">${escHTML(m)}</div>`).join('');
+    } else {
+      sug.style.display='none';
+    }
+  };
+  input.onblur = function(){ setTimeout(()=>document.getElementById('afCarpetaSuggestions').style.display='none',200); };
   openModal('modalAddFile');
 }
 async function submitAddFile(){
   if(selectedFiles.af.length===0){ toast('err','Seleccioná al menos un archivo'); return; }
+  const carpeta = document.getElementById('afCarpeta').value.trim();
   const btn=document.getElementById('btnSubmitAddFile');
   btn.disabled=true; btn.textContent='Subiendo…';
   try{
-    await uploadFiles(carpetaDocId, selectedFiles.af);
+    await uploadFiles(carpetaDocId, selectedFiles.af, carpeta);
     closeModal('modalAddFile');
     toast('ok','Archivo(s) subido(s)');
     await loadCarpetaFiles();
@@ -1300,14 +1350,14 @@ async function submitAddFile(){
 }
 
 // ── FILE OPERATIONS ────────────────────────────────────────────────────
-async function uploadFiles(docId, files){
+async function uploadFiles(docId, files, carpeta=''){
   for(const file of files){
-    const ext=file.name.split('.').pop();
     const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const path=`${docId}/${Date.now()}_${safeName}`;
+    const folder = carpeta ? `${docId}/${carpeta}` : `${docId}`;
+    const path=`${folder}/${Date.now()}_${safeName}`;
     const {error:ue}=await sb.storage.from(BUCKET).upload(path, file, {contentType:file.type, upsert:false});
     if(ue) throw ue;
-    const {error:de}=await sb.from('sgi_archivos').insert({doc_id:docId,filename:file.name,storage_path:path,size:file.size,mime_type:file.type});
+    const {error:de}=await sb.from('sgi_archivos').insert({doc_id:docId,filename:file.name,storage_path:path,size:file.size,mime_type:file.type,carpeta:carpeta||''});
     if(de) throw de;
   }
 }
