@@ -212,6 +212,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f6;color:#1e2d3
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Importar Excel
     </button>
+    <button id="btnBulk" class="btn btn-outline" style="display:none" onclick="openBulkModal()" title="Actualizar código, revisión, fecha y archivo de varios documentos a la vez">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      Actualización masiva
+    </button>
     <button id="btnAdminLogin" class="btn btn-outline" onclick="openAdminModal()" style="display:none">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Admin
@@ -640,6 +644,62 @@ ALTER TABLE sgi_archivos   DISABLE ROW LEVEL SECURITY;</div>
   </div>
 </div>
 
+<!-- BULK UPDATE MODAL -->
+<div class="modal" id="modalBulk" style="display:none">
+  <div class="modal-bg" onclick="closeModal('modalBulk')"></div>
+  <div class="modal-box" style="max-width:860px">
+    <div class="modal-hdr"><span class="modal-hdr-title">🔄 Actualización masiva de documentos</span><button class="modal-close" onclick="closeModal('modalBulk')">×</button></div>
+    <div class="modal-body">
+      <div style="background:#f0f2f6;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:.8rem;color:#374151;line-height:1.65">
+        Subí los archivos con nombre <strong>CÓDIGO NOMBRE Rev.XX.docx</strong> (ej: <em>PS-PO-CONS-01 ARMAR PUENTE DE PRODUCCION Rev.04.docx</em>).<br>
+        Cada archivo se asocia al documento con ese código. Si el código cambió, completá el <strong>código anterior</strong> y se busca por su número.<br>
+        Se actualizan <strong>código, revisión y fecha</strong> y se sube el archivo nuevo.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg"><label>Código anterior (prefijo, opcional)</label><input type="text" class="fi" id="bulkOldPrefix" placeholder="Ej: PS-PO-CAÑ-" oninput="bulkRefresh()"></div>
+        <div class="fg"><label>Fecha de los documentos</label><input type="date" class="fi" id="bulkFecha" onchange="bulkRefresh()"></div>
+      </div>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem;color:#374151;margin:2px 0 12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bulkReplace" checked onchange="bulkRefresh()"> Reemplazar el archivo anterior del documento</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bulkRename" onchange="bulkRefresh()"> Actualizar también el nombre del documento</label>
+      </div>
+      <div class="fg">
+        <div class="upload-zone" id="bulkDropZone" onclick="document.getElementById('bulkFileInput').click()" ondragover="dzOver(event,'bulkDropZone')" ondragleave="dzLeave('bulkDropZone')" ondrop="bulkDrop(event)">
+          <p class="upload-zone-text">Arrastrá o hacé clic para seleccionar los archivos</p>
+          <p class="upload-zone-hint">DOCX, DOC, PDF, XLSX · varios a la vez</p>
+        </div>
+        <input type="file" id="bulkFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="bulkFilesSelected(this.files)">
+      </div>
+      <div id="bulkPreview" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:.83rem;font-weight:700;color:#1e2d3e">Vista previa</span>
+          <span id="bulkCount" style="font-size:.78rem;background:#dcfce7;color:#166534;padding:2px 10px;border-radius:20px;font-weight:700"></span>
+        </div>
+        <div style="max-height:320px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:.74rem">
+            <thead><tr style="background:#f8fafc;position:sticky;top:0;text-align:left">
+              <th style="padding:6px 8px">Archivo</th><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Revisión</th><th style="padding:6px 8px">Fecha</th><th style="padding:6px 8px">Archivo anterior</th><th style="padding:6px 8px">Estado</th>
+            </tr></thead>
+            <tbody id="bulkPreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="bulkProgress" style="display:none;margin-top:14px">
+        <div style="font-size:.82rem;color:#374151;margin-bottom:6px" id="bulkProgressText">Actualizando...</div>
+        <div style="background:#e5e7eb;border-radius:20px;height:8px"><div id="bulkProgressBar" style="background:#22c55e;height:8px;border-radius:20px;transition:width .3s;width:0%"></div></div>
+        <div id="bulkErrors" style="display:none;margin-top:10px;background:#fee2e2;border-radius:8px;padding:10px;font-size:.78rem;color:#991b1b"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalBulk')">Cerrar</button>
+      <button class="btn btn-amber" id="btnDoBulk" style="display:none" onclick="doBulkUpdate()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Actualizar <span id="btnBulkCount"></span> documentos
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ SCRIPTS ═══════════════ -->
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────
@@ -960,6 +1020,7 @@ function doAdminLogin(){
     document.getElementById('adminBar').classList.add('show');
     document.getElementById('btnAdminLogin').style.display='none';
     document.getElementById('btnImport').style.display='inline-flex';
+    document.getElementById('btnBulk').style.display='inline-flex';
     const isArea=AREAS.includes(currentView);
     if(isArea) document.getElementById('btnAddDoc').style.display='inline-flex';
     // Re-render current area to show action columns
@@ -975,6 +1036,7 @@ function adminLogout(){
   document.getElementById('adminBar').classList.remove('show');
   document.getElementById('btnAdminLogin').style.display='inline-flex';
   document.getElementById('btnImport').style.display='none';
+  document.getElementById('btnBulk').style.display='none';
   document.getElementById('btnAddDoc').style.display='none';
   if(AREAS.includes(currentView)) loadArea(currentView);
   toast('info','Sesión de administrador cerrada');
@@ -1760,6 +1822,169 @@ async function doImport(){
   if(skipped === 0 && insertErrors === 0){
     setTimeout(()=>{ closeModal('modalImport'); toast('ok', imported + ' documentos importados'); }, 1500);
   }
+}
+
+// ── ACTUALIZACIÓN MASIVA ─────────────────────────────────────────────
+// Asocia cada archivo "CÓDIGO NOMBRE Rev.XX.ext" a un documento existente
+// (por código nuevo, o por código anterior + número) y actualiza
+// código, revisión, fecha y archivo.
+let bulkFiles = [];
+let bulkPlan = [];
+let bulkDocs = null;
+let bulkArchivos = null;
+
+// Normaliza códigos y nombres de archivo para comparar: sin Ñ, sin acentos,
+// solo letras y números ("PS-PO-CAÑ-01" y "PS-PO-CA_-01" quedan iguales).
+function bulkNorm(s){
+  return String(s||'').replace(/[ñÑ]/g,'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9]/g,'');
+}
+// Separa un código en prefijo normalizado + número final
+function bulkSplitCode(code){
+  const m = String(code||'').trim().match(/^(.*?)(\d+)\s*$/);
+  return m ? {pre: bulkNorm(m[1]), num: parseInt(m[2],10)} : null;
+}
+function bulkParseName(fname){
+  const base = fname.replace(/\.[^.]+$/,'');
+  const m = base.match(/^\s*([A-Za-zÑñ]+(?:-[A-Za-zÑñ0-9]+)*-\d{1,3})[\s_]+(.+?)[\s_]+Rev[\s._-]*(\d{1,3})\s*$/i);
+  if(!m) return null;
+  return {codigo: m[1].toUpperCase(), nombre: m[2].replace(/_/g,' ').trim(), rev: m[3].padStart(2,'0')};
+}
+function bulkFmtRev(nn, prev){
+  if(prev && !/rev/i.test(prev)) return nn;   // respeta el formato que ya usa el documento
+  return 'Rev. ' + nn;
+}
+function bulkFmtDate(iso){ return iso ? iso.split('-').reverse().join('/') : '—'; }
+
+async function openBulkModal(){
+  bulkFiles = []; bulkPlan = []; bulkDocs = null; bulkArchivos = null;
+  const hoy = new Date(); hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());   // fecha local, no UTC
+  document.getElementById('bulkFecha').value = hoy.toISOString().slice(0,10);
+  document.getElementById('bulkPreview').style.display = 'none';
+  document.getElementById('bulkProgress').style.display = 'none';
+  document.getElementById('bulkErrors').style.display = 'none';
+  document.getElementById('btnDoBulk').style.display = 'none';
+  document.getElementById('btnDoBulk').disabled = false;
+  document.getElementById('bulkFileInput').value = '';
+  openModal('modalBulk');
+}
+function bulkDrop(e){
+  e.preventDefault(); dzLeave('bulkDropZone');
+  bulkFilesSelected(e.dataTransfer.files);
+}
+async function bulkFilesSelected(list){
+  bulkFiles = Array.from(list||[]);
+  if(!bulkFiles.length) return;
+  try{
+    const [r1, r2] = await Promise.all([
+      sb.from('sgi_documentos').select('*'),
+      sb.from('sgi_archivos').select('*')
+    ]);
+    if(r1.error) throw r1.error;
+    if(r2.error) throw r2.error;
+    bulkDocs = r1.data||[]; bulkArchivos = r2.data||[];
+  }catch(e){ toast('err','Error leyendo documentos: '+(e.message||e)); return; }
+  bulkRefresh();
+}
+function bulkRefresh(){
+  if(!bulkDocs || !bulkFiles.length) return;
+  const oldPre = bulkNorm(document.getElementById('bulkOldPrefix').value);
+  const fecha = document.getElementById('bulkFecha').value || null;
+  const replace = document.getElementById('bulkReplace').checked;
+  const rename = document.getElementById('bulkRename').checked;
+  const usedIds = new Set();
+  bulkPlan = bulkFiles.map(file=>{
+    const p = {file, ok:false, msg:'', doc:null, oldFiles:[]};
+    const info = bulkParseName(file.name);
+    if(!info){ p.msg = 'Nombre de archivo no reconocido'; return p; }
+    p.info = info;
+    const sp = bulkSplitCode(info.codigo);
+    // 1) mismo código ya cargado  2) código anterior + mismo número
+    let cands = bulkDocs.filter(d=>bulkNorm(d.codigo)===bulkNorm(info.codigo));
+    if(!cands.length && oldPre){
+      cands = bulkDocs.filter(d=>{ const s=bulkSplitCode(d.codigo); return s && s.pre===oldPre && s.num===sp.num; });
+    }
+    if(!cands.length){ p.msg = oldPre ? 'No se encontró el documento' : 'No existe ese código (¿completaste el código anterior?)'; return p; }
+    if(cands.length>1){ p.msg = 'Hay '+cands.length+' documentos que coinciden'; return p; }
+    const d = cands[0];
+    if(usedIds.has(d.id)){ p.msg = 'Otro archivo ya apunta a este documento'; return p; }
+    usedIds.add(d.id);
+    p.doc = d;
+    p.update = {codigo: info.codigo, revision: bulkFmtRev(info.rev, d.revision), fecha};
+    if(rename) p.update.nombre = info.nombre;
+    if(replace){
+      // archivos de la carpeta principal del documento cuyo nombre lleva el código actual
+      const s = bulkSplitCode(d.codigo);
+      const re = s ? new RegExp(s.pre + '0*' + s.num + '(?!\\d)') : null;
+      const root = bulkArchivos.filter(a=>a.doc_id===d.id && !a.carpeta);
+      p.oldFiles = root.filter(a=>re && re.test(bulkNorm(a.filename)));
+      // si ninguno lleva el código pero hay un único documento Word/PDF, se toma ese
+      if(!p.oldFiles.length){
+        const docsLike = root.filter(a=>/\.(docx?|docm|pdf)$/i.test(a.filename));
+        if(docsLike.length===1) p.oldFiles = docsLike;
+      }
+    }
+    p.ok = true; p.msg = 'Listo para actualizar';
+    return p;
+  });
+  const body = document.getElementById('bulkPreviewBody');
+  body.innerHTML = bulkPlan.map(p=>{
+    const td = 'style="padding:6px 8px;border-top:1px solid #f1f5f9;vertical-align:top"';
+    const st = p.ok ? '<span style="color:#166534;font-weight:700">✔ '+escHTML(p.msg)+'</span>'
+                    : '<span style="color:#991b1b;font-weight:700">✖ '+escHTML(p.msg)+'</span>';
+    const cod = p.doc ? escHTML(p.doc.codigo)+(p.doc.codigo!==p.update.codigo?' → <strong>'+escHTML(p.update.codigo)+'</strong>':'') : (p.info?escHTML(p.info.codigo):'—');
+    const rev = p.doc ? escHTML(p.doc.revision||'—')+' → <strong>'+escHTML(p.update.revision)+'</strong>' : '—';
+    const fch = p.doc ? bulkFmtDate(p.doc.fecha)+' → <strong>'+bulkFmtDate(p.update.fecha)+'</strong>' : '—';
+    const old = p.doc ? (p.oldFiles.length ? p.oldFiles.map(a=>'🗑 '+escHTML(a.filename)).join('<br>') : (document.getElementById('bulkReplace').checked?'<span style="color:#9ca3af">ninguno (se agrega)</span>':'<span style="color:#9ca3af">se conserva</span>')) : '—';
+    return `<tr><td ${td}>${escHTML(p.file.name)}</td><td ${td}>${cod}</td><td ${td}>${rev}</td><td ${td}>${fch}</td><td ${td}>${old}</td><td ${td}>${st}</td></tr>`;
+  }).join('');
+  const nOk = bulkPlan.filter(p=>p.ok).length;
+  document.getElementById('bulkCount').textContent = nOk + ' de ' + bulkPlan.length + ' listos';
+  document.getElementById('bulkCount').style.background = nOk===bulkPlan.length ? '#dcfce7' : '#fef3c7';
+  document.getElementById('bulkCount').style.color = nOk===bulkPlan.length ? '#166534' : '#92400e';
+  document.getElementById('bulkPreview').style.display = 'block';
+  document.getElementById('btnBulkCount').textContent = '(' + nOk + ')';
+  document.getElementById('btnDoBulk').style.display = nOk ? 'inline-flex' : 'none';
+}
+async function doBulkUpdate(){
+  const todo = bulkPlan.filter(p=>p.ok);
+  if(!todo.length) return;
+  if(!confirm('Se van a actualizar ' + todo.length + ' documentos. ¿Continuar?')) return;
+  const btn = document.getElementById('btnDoBulk'); btn.disabled = true;
+  const bar = document.getElementById('bulkProgressBar'), txt = document.getElementById('bulkProgressText');
+  const errEl = document.getElementById('bulkErrors');
+  document.getElementById('bulkProgress').style.display = 'block';
+  errEl.style.display = 'none';
+  bar.style.width = '5%'; bar.style.background = '#22c55e';
+  const errs = []; let done = 0;
+  for(const p of todo){
+    try{
+      // 1) subir el archivo nuevo  2) borrar el anterior  3) actualizar datos
+      await uploadFiles(p.doc.id, [p.file]);
+      if(p.oldFiles.length){
+        const {error:se} = await sb.storage.from(BUCKET).remove(p.oldFiles.map(a=>a.storage_path));
+        if(se) throw se;
+        const {error:de} = await sb.from('sgi_archivos').delete().in('id', p.oldFiles.map(a=>a.id));
+        if(de) throw de;
+      }
+      const {error:ue} = await sb.from('sgi_documentos').update(p.update).eq('id', p.doc.id);
+      if(ue) throw ue;
+    }catch(e){ errs.push(p.file.name + ': ' + (e.message||e)); console.error(e); }
+    done++;
+    bar.style.width = Math.max(Math.round(done/todo.length*100), 5) + '%';
+    txt.textContent = 'Actualizando... ' + done + ' / ' + todo.length;
+  }
+  const ok = todo.length - errs.length;
+  txt.textContent = '✅ ' + ok + ' documentos actualizados.' + (errs.length ? ' ❌ ' + errs.length + ' con error.' : '');
+  if(errs.length){
+    bar.style.background = '#f59e0b';
+    errEl.style.display = 'block';
+    errEl.innerHTML = '<strong>Errores:</strong><br>' + errs.map(escHTML).join('<br>');
+  }
+  btn.style.display = 'none';
+  loadDashboard();
+  if(AREAS.includes(currentView)) loadArea(currentView);
+  if(!errs.length) toast('ok', ok + ' documentos actualizados');
 }
 
 </script>
